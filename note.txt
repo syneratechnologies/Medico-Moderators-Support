@@ -1,0 +1,601 @@
+Medico — Student Support & History Management Dashboard
+1. Project Goal
+
+Medico-এর internal team-এর জন্য একটি secure Student Support & History Management Dashboard তৈরি করতে হবে।
+
+System-এর মূল উদ্দেশ্য:
+
+Student profile management
+Student-এর complete support history রাখা
+Support create ও manage করা
+Manager → Moderator assignment
+Excel/CSV থেকে bulk support creation
+Branch / Group / Batch / Individual ভিত্তিতে bulk assignment
+Moderator-এর কাজের tracking
+Mandatory support outcome/note
+Powerful student/support search
+Role-based access control
+Activity/audit history
+Reporting
+2. User Roles
+
+System-এ ৩টি role থাকবে।
+
+Super Admin
+
+Super Admin হলো system-এর highest-level user।
+
+Super Admin পারবে:
+
+সব dashboard দেখতে
+সব student দেখতে
+সব support দেখতে
+Student create/edit করতে
+Support create/edit/delete করতে
+Manager create/edit/disable করতে
+Moderator create/edit/disable করতে
+Support assign/reassign করতে
+সব branch/group/batch manage করতে
+সব support history দেখতে
+সব activity log দেখতে
+সব report দেখতে
+যেকোনো data manage করতে
+
+Super Admin-এর কোনো functional restriction থাকবে না।
+
+Manager
+
+Manager পারবে:
+
+Student দেখতে
+Student profile create/update করতে
+Moderator account create করতে
+Moderator manage করতে
+Support create করতে
+Manual support entry করতে
+Excel/CSV upload করতে
+Uploaded data validate করতে
+Support assign করতে
+Branch/Group/Batch অনুযায়ী filter করতে
+Multiple student/support একসাথে moderator-কে assign করতে
+Support history দেখতে
+Student-এর previous support দেখতে
+Relevant reports দেখতে
+
+Manager Super Admin account manage করতে পারবে না।
+
+Moderator
+
+Moderator-এর access সীমিত থাকবে।
+
+Moderator পারবে:
+
+নিজের assigned support দেখতে
+Assigned student-এর basic information দেখতে
+Support details দেখতে
+Support status update করতে
+Support-এর note/outcome লিখতে
+Support complete করতে
+নিজের completed/pending history দেখতে
+Student search করতে
+Student-এর previous support history দেখতে
+
+Moderator অন্য moderator-এর assigned support manage করতে পারবে না।
+
+3. Student Profile
+
+প্রতিটি student-এর একটি unique profile থাকবে।
+
+Basic information:
+
+Roll
+Serial
+Name
+Student Number
+Guardian Phone
+Branch
+Group
+Batch
+
+পরবর্তীতে প্রয়োজন হলে additional fields যোগ করার ব্যবস্থা রাখতে হবে।
+
+4. Student Duplicate Logic
+
+এটা system-এর সবচেয়ে important business logic।
+
+Manager যখন নতুন support তৈরি করবে, system প্রথমে student identify করবে।
+
+Priority:
+
+Student Number
+        ↓
+Roll / appropriate unique identifier
+Student যদি নতুন হয়
+
+যদি student database-এ না থাকে:
+
+Create Student Profile
+        ↓
+Create Support
+Student যদি আগে থেকেই থাকে
+
+Existing student profile-এর জন্য:
+
+Create New Support
+
+নতুন student profile তৈরি করা যাবে না।
+
+Example:
+
+Student: Rahim
+Student No: ST1001
+
+Support History:
+
+1. Guardian Call
+2. Document Collection
+3. Payment Follow-up
+4. Appointment
+
+একজন student-এর lifetime support history থাকবে।
+
+5. Support Management
+
+প্রতিটি support-এর information থাকবে:
+
+Student
+Support Type
+Description
+Created By
+Created Date
+Assigned Moderator
+Status
+Priority
+Due Date
+Outcome / Note
+Completed Date
+
+Status:
+
+Pending
+In Progress
+Completed
+Cancelled
+6. Support Creation
+
+Manager দুইভাবে support create করতে পারবে।
+
+Option A — Manual Entry
+
+একজন বা একাধিক student-এর জন্য manually support তৈরি করা যাবে।
+
+Required information:
+
+Roll
+Serial
+Name
+Student Number
+Guardian Phone
+Branch
+Group
+Batch
+Support Type
+Support Description
+
+যদি Student Number existing হয় → existing student-এর সাথে support attach হবে।
+
+না থাকলে → নতুন student profile তৈরি হবে।
+
+7. Excel / CSV Upload
+
+Manager Excel বা CSV upload করতে পারবে।
+
+Example:
+
+Roll	Serial	Name	Student Number	Guardian Phone	Branch	Group	Batch
+
+Upload করার পর system:
+
+Upload
+   ↓
+Read Excel
+   ↓
+Detect Columns
+   ↓
+Validate Data
+   ↓
+Identify Existing Students
+   ↓
+Create New Students
+   ↓
+Create Supports
+Excel Import Preview
+
+Import করার আগে দেখাবে:
+
+Total Rows: 250
+
+New Students: 180
+Existing Students: 70
+
+Valid Rows: 244
+Invalid Rows: 6
+
+Invalid rows-এর কারণ দেখাতে হবে।
+
+Example:
+
+Row 18
+Missing Student Number
+
+Row 47
+Invalid Guardian Phone
+
+Row 91
+Missing Branch
+
+Manager preview দেখে তারপর:
+
+Confirm Import
+
+করবে।
+
+8. Excel Auto-Fill
+
+Excel upload করলে Manager-কে manually প্রতিটি field entry করতে হবে না।
+
+System automatically:
+
+Roll
+Serial
+Name
+Student Number
+Guardian Phone
+Branch
+Group
+Batch
+
+populate করবে।
+
+Excel column names কিছুটা different হলেও column mapping interface থাকবে।
+
+Example:
+
+Excel Column          System Field
+
+Student ID       →    Student Number
+Student Name     →    Name
+Guardian Contact →    Guardian Phone
+Campus           →    Branch
+9. Support Assignment
+
+Support তৈরি হওয়ার পর Manager Moderator assign করতে পারবে।
+
+Assignment methods:
+
+Individual
+
+একজন student/support select করে moderator assign।
+
+Branch
+Branch: Dhaka
+
+এর সব relevant support filter করে assign।
+
+Group
+Group: A
+Batch
+Batch: 2026
+Combined Filter
+
+Example:
+
+Branch: Dhaka
+Group: A
+Batch: 2026
+Support: Guardian Call
+
+তারপর:
+
+Select All
+        ↓
+Assign Moderator
+
+এভাবে একসাথে ৫০/১০০/৫০০ support assign করা যাবে।
+
+10. Moderator Workflow
+
+Moderator dashboard-এ:
+
+My Supports
+
+Pending
+In Progress
+Completed
+
+Support খুললে:
+
+Student Information
+
+Support Type
+Description
+Created Date
+Assigned Date
+Priority
+
+Moderator কাজ শুরু করলে:
+
+Pending
+ ↓
+In Progress
+
+কাজ শেষ করার সময়:
+
+Outcome / Note
+
+Mandatory হবে।
+
+Note ছাড়া:
+
+Completed
+
+করা যাবে না।
+
+Example:
+
+Guardian-এর সাথে যোগাযোগ করা হয়েছে এবং required documents সংগ্রহ করা হয়েছে।
+
+তারপর:
+
+Mark as Completed
+
+11. Student Search
+
+সব role-এর জন্য global search থাকবে।
+
+Search করা যাবে:
+
+Student Name
+Roll
+Serial
+Student Number
+Guardian Phone
+Branch
+Group
+Batch
+Support Type
+
+Search result থেকে:
+
+Student Profile
+       ↓
+Complete Support History
+
+দেখা যাবে।
+
+12. Student Profile Page
+
+Student profile হবে system-এর central page।
+
+Example:
+
+Rahim Ahmed
+
+Roll: 101
+Serial: S001
+Student Number: ST1001
+Guardian Phone: 017XXXXXXXX
+Branch: Dhaka
+Group: A
+Batch: 2026
+
+তার নিচে:
+
+Support History
+Date	Support	Moderator	Status	Outcome
+Sep 01	Guardian Call	Moderator A	Completed	Contacted
+Sep 03	Document	Moderator B	Completed	Received
+Sep 05	Follow-up	Moderator C	Pending	—
+13. Common Dashboard Search
+
+প্রতিটি role-এর dashboard-এ একটি global search থাকবে।
+
+User search করলে student/support-এর relevant information পাওয়া যাবে।
+
+Permissions অনুযায়ী result দেখাবে।
+
+Super Admin → সব data
+
+Manager → তার permitted data
+
+Moderator → নিজের assigned data + allowed student history
+
+14. Dashboard Statistics
+Super Admin
+Total Students
+Total Supports
+Pending Supports
+In Progress
+Completed
+Total Managers
+Total Moderators
+
+Additional:
+
+Branch-wise Support
+Batch-wise Support
+Support Type Statistics
+Moderator Performance
+Recent Activities
+Manager
+Total Students
+Total Supports
+Pending
+In Progress
+Completed
+Total Moderators
+Moderator
+Assigned Supports
+Pending
+In Progress
+Completed
+Overdue
+15. Activity Log / Audit System
+
+System-এর গুরুত্বপূর্ণ actionগুলো log করতে হবে।
+
+Example:
+
+Manager created Support
+Manager assigned Support to Moderator
+Moderator started Support
+Moderator added Note
+Moderator completed Support
+Manager reassigned Support
+Super Admin edited Student
+
+প্রতিটির সাথে:
+
+User
+Action
+Target
+Date/Time
+Previous Value
+New Value
+
+রাখা ভালো।
+
+16. Database — MongoDB
+
+Database হিসেবে:
+
+MongoDB + MongoDB Atlas
+
+ব্যবহার করব।
+
+Suggested collections:
+
+users
+students
+supports
+supportAssignments
+supportNotes
+supportTypes
+branches
+groups
+batches
+activityLogs
+
+প্রয়োজনে আরও collections যোগ করা যাবে।
+
+Important
+
+Student এবং Support আলাদা collection হবে।
+
+students
+    ↓
+studentId
+    ↓
+supports
+    ↓
+supportAssignments
+    ↓
+users/moderators
+
+Student document-এর ভিতরে হাজার হাজার support history embed করা হবে না।
+
+17. Recommended Technology
+
+আমি Cursor-এ build করালে এই stack recommend করব:
+
+Frontend:
+Next.js
+TypeScript
+Tailwind CSS
+shadcn/ui
+
+Backend:
+Next.js API / Node.js
+
+Database:
+MongoDB
+MongoDB Atlas
+
+ODM:
+Mongoose
+
+Authentication:
+JWT / secure session-based authentication
+
+Excel:
+xlsx / ExcelJS
+
+Validation:
+Zod
+
+Charts:
+Recharts
+18. UI/UX Direction
+
+Dashboard দেখতে হবে modern SaaS/admin dashboard এর মতো।
+
+Clean:
+
+Sidebar
+Topbar
+Dashboard Cards
+Tables
+Filters
+Search
+Modal / Drawer
+Tabs
+Status Badges
+Charts
+
+Mobile/tablet responsive হবে।
+
+বিশেষ করে Moderator-এর dashboard খুব simple হবে যাতে সে দ্রুত:
+
+Assigned → Open → Work → Note → Complete
+
+করতে পারে।
+
+19. Security
+
+Role-based permission অবশ্যই backend level-এ enforce করতে হবে।
+
+শুধু frontend-এ button hide করলেই হবে না।
+
+Example:
+
+Super Admin
+    ↓
+Full Access
+
+Manager
+    ↓
+Student + Support + Moderator
+
+Moderator
+    ↓
+Assigned Support + Allowed Student History
+
+Backend API প্রতিটি request-এর permission verify করবে।
+
+20. Future-ready রাখব
+
+Architecture এমন হতে হবে যাতে ভবিষ্যতে সহজে যোগ করা যায়:
+
+Notifications
+Email
+WhatsApp
+SMS
+File/Documents
+Support Priority
+Due Date
+Reports Export
+PDF Reports
+Excel Reports
+Moderator Performance
+Branch Performance
+Advanced Analytics
