@@ -107,10 +107,15 @@ function parseMentors(md: string) {
   return mentors;
 }
 
-async function upsertNamed(
-  model: mongoose.Model<{ name: string; isActive?: boolean }>,
-  names: string[]
-) {
+type NamedCatalog = {
+  updateOne: (
+    filter: { name: string },
+    update: { $set: { isActive: boolean }; $setOnInsert: { name: string } },
+    options: { upsert: true }
+  ) => Promise<{ upsertedCount?: number | null }>;
+};
+
+async function upsertNamed(model: NamedCatalog, names: string[]) {
   let created = 0;
   let existing = 0;
   for (const name of names) {
