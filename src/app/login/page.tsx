@@ -61,7 +61,7 @@ export default function LoginPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f5c56]">Sign in</p>
           <h2 className="mt-2 font-[family-name:var(--font-fraunces)] text-[1.75rem] md:text-3xl">Welcome back</h2>
           <div className="mt-6 space-y-4">
-            <Input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" type="email" autoComplete="username" />
+            <Input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email or phone" type="text" autoComplete="username" />
             <Input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" type="password" autoComplete="current-password" />
             <Button className="min-h-12 w-full" disabled={loading}>
               {loading ? "Checking…" : "Enter dashboard"}

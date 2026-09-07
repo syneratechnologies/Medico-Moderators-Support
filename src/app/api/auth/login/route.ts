@@ -5,15 +5,23 @@ import { createSessionToken, setSessionCookie, verifyPassword } from "@/lib/auth
 import { User } from "@/models/User";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().min(3),
   password: z.string().min(1),
 });
+
+function findUserQuery(identifier: string) {
+  const value = identifier.trim();
+  if (value.includes("@")) {
+    return { email: value.toLowerCase() };
+  }
+  return { phone: value.replace(/\s+/g, "") };
+}
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Valid email and password are required" }, { status: 400 });
+    return NextResponse.json({ error: "Email or phone and password are required" }, { status: 400 });
   }
 
   try {
@@ -24,7 +32,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const user = await User.findOne({ email: parsed.data.email.toLowerCase() });
+    const user = await User.findOne(findUserQuery(parsed.data.email));
     if (!user || !user.isActive) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
