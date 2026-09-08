@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { jsonError, withAuth } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
-import { findOrCreateLookup } from "@/lib/lookups";
 import { isBlankRow, validateSheetRow } from "@/lib/sheet";
-import { findStudentByNumber, studentPayload } from "@/lib/students";
+import { studentPayload } from "@/lib/students";
 import { normalizeStudentNumber } from "@/lib/utils";
 import { Batch } from "@/models/Batch";
 import { Branch } from "@/models/Branch";
@@ -21,6 +20,35 @@ const rowSchema = z.object({
   group: z.string(),
   batch: z.string(),
 });
+
+type NamedDoc = { _id: unknown; name: string };
+
+function indexLookups(docs: NamedDoc[]) {
+  const byName = new Map<string, string>();
+  const byId = new Map<string, string>();
+  for (const doc of docs) {
+    const id = String(doc._id);
+    byId.set(id, id);
+    byName.set(doc.name.trim().toLowerCase(), id);
+  }
+  return { byName, byId };
+}
+
+async function resolveLookupId(
+  value: string,
+  maps: ReturnType<typeof indexLookups>,
+  model: typeof Branch | typeof Group | typeof Batch
+) {
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error("Branch, group and batch cannot be empty");
+  const existing = maps.byId.get(trimmed) ?? maps.byName.get(trimmed.toLowerCase());
+  if (existing) return existing;
+  const created = await model.create({ name: trimmed, isActive: true });
+  const id = String(created._id);
+  maps.byId.set(id, id);
+  maps.byName.set(trimmed.toLowerCase(), id);
+  return id;
+}
 
 export async function POST(request: Request) {
   const { user, error } = await withAuth(["super_admin", "manager"]);
@@ -45,9 +73,18 @@ export async function POST(request: Request) {
     );
   }
 
-  let createdStudents = 0;
+  const [branchDocs, groupDocs, batchDocs] = await Promise.all([
+    Branch.find().select("name").lean(),
+    Group.find().select("name").lean(),
+    Batch.find().select("name").lean(),
+  ]);
+  const branches = indexLookups(branchDocs);
+  const groups = indexLookups(groupDocs);
+  const batches = indexLookups(batchDocs);
+
   let skippedExisting = 0;
   const seen = new Set<string>();
+  const payloads: ReturnType<typeof studentPayload>[] = [];
 
   try {
     for (const row of filled) {
@@ -58,32 +95,29 @@ export async function POST(request: Request) {
       }
 
       const [branch, group, batch] = await Promise.all([
-        findOrCreateLookup(Branch, row.branch),
-        findOrCreateLookup(Group, row.group),
-        findOrCreateLookup(Batch, row.batch),
+        resolveLookupId(row.branch, branches, Branch),
+        resolveLookupId(row.group, groups, Group),
+        resolveLookupId(row.batch, batches, Batch),
       ]);
 
-      if (await findStudentByNumber(studentNumber)) {
-        skippedExisting += 1;
-        seen.add(studentNumber);
-        continue;
-      }
-
-      await Student.create(
+      payloads.push(
         studentPayload({
           roll: row.roll,
           serial: row.serial,
           name: row.name,
           studentNumber,
           guardianPhone: row.guardianPhone,
-          branch: String(branch._id),
-          group: String(group._id),
-          batch: String(batch._id),
+          branch,
+          group,
+          batch,
         })
       );
-      createdStudents += 1;
       seen.add(studentNumber);
       existingSet.add(studentNumber);
+    }
+
+    if (payloads.length) {
+      await Student.insertMany(payloads, { ordered: false });
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import failed";
@@ -97,8 +131,8 @@ export async function POST(request: Request) {
     user,
     action: "Imported students",
     targetType: "student",
-    newValue: { createdStudents, skippedExisting },
+    newValue: { createdStudents: payloads.length, skippedExisting },
   });
 
-  return NextResponse.json({ createdStudents, skippedExisting });
+  return NextResponse.json({ createdStudents: payloads.length, skippedExisting });
 }

@@ -96,7 +96,9 @@ export function CreateStudentSupport({
         <p className="mt-1 text-sm text-[#5d6f6b]">
           {selectedStudents.length === 1
             ? `S-Number ${selectedStudents[0].studentNumber}`
-            : selectedStudents.map((item) => item.name).join(", ")}
+            : `${selectedStudents.slice(0, 3).map((item) => item.name).join(", ")}${
+                selectedStudents.length > 3 ? ` +${selectedStudents.length - 3} more` : ""
+              }`}
         </p>
         <div className="mt-5 space-y-3">
           <Field label="Support type">

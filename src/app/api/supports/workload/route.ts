@@ -41,6 +41,7 @@ export async function GET() {
         id: String(item._id),
         name: item.name,
         email: item.email,
+        phone: item.phone ?? "",
         total: stats.total,
         pending: stats.pending,
         inProgress: stats.inProgress,

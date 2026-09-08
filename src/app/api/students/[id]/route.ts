@@ -93,3 +93,29 @@ export async function PATCH(
 
   return NextResponse.json(serializeStudent(student.toObject() as Record<string, unknown>));
 }
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { user, error } = await withAuth(["super_admin", "manager"]);
+  if (error) return error;
+  const { id } = await context.params;
+
+  const student = await Student.findById(id);
+  if (!student) return jsonError("Student not found", 404);
+
+  const supports = await Support.deleteMany({ student: id });
+  await student.deleteOne();
+
+  await logActivity({
+    user,
+    action: "Deleted student",
+    targetType: "student",
+    targetId: id,
+    previousValue: { name: student.name, studentNumber: student.studentNumber },
+    newValue: { deletedSupports: supports.deletedCount },
+  });
+
+  return NextResponse.json({ deleted: true, deletedSupports: supports.deletedCount });
+}

@@ -32,6 +32,14 @@ export function canDeleteSupport(role: Role) {
   return role === "super_admin" || role === "manager";
 }
 
+export function canDeleteStudent(role: Role) {
+  return role === "super_admin" || role === "manager";
+}
+
+export function canCompleteAnySupport(role: Role) {
+  return role === "super_admin" || role === "manager";
+}
+
 export function assertRole(user: SessionUser | null, roles: Role[]) {
   if (!user) {
     const error = new Error("Unauthorized");

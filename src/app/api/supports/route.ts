@@ -133,9 +133,8 @@ export async function POST(request: Request) {
       return jsonError("Active moderator not found");
     }
 
-    const created = [];
-    for (const student of students) {
-      const support = await Support.create({
+    const created = await Support.insertMany(
+      students.map((student) => ({
         student: student._id,
         supportType: supportType._id,
         createdBy: user.id,
@@ -148,16 +147,14 @@ export async function POST(request: Request) {
               assignedAt: new Date(),
             }
           : {}),
-      });
-      await support.populate(populate);
-      created.push(serializeSupport(support.toObject() as Record<string, unknown>));
-    }
+      }))
+    );
 
     await logActivity({
       user,
       action: created.length > 1 ? "Created supports for selected students" : "Created support",
       targetType: "support",
-      targetId: created[0]?.id,
+      targetId: String(created[0]?._id ?? ""),
       newValue: {
         count: created.length,
         studentIds,
@@ -165,8 +162,6 @@ export async function POST(request: Request) {
       },
     });
     return NextResponse.json({
-      support: created[0],
-      supports: created,
       createdCount: created.length,
       createdStudent: false,
     });

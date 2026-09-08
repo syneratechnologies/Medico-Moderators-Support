@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { CreateStudentSupport } from "@/components/create-student-support";
 import { StudentQueueCard } from "@/components/mobile-cards";
 import { PageHeader } from "@/components/page-header";
@@ -55,6 +56,22 @@ export default function StudentsPage() {
     load().catch(() => {});
   }, [q, branch, group, batch]);
 
+  async function deleteSelected() {
+    if (!selected.length) return;
+    if (!window.confirm(`Delete ${selected.length} student${selected.length > 1 ? "s" : ""} and their supports?`)) return;
+    try {
+      const result = await api<{ deleted: number; deletedSupports: number }>("/api/students/delete", {
+        method: "POST",
+        body: JSON.stringify({ studentIds: selected }),
+      });
+      toast.success(`Deleted ${result.deleted} student${result.deleted > 1 ? "s" : ""}`);
+      setSelected([]);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete students");
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -101,7 +118,7 @@ export default function StudentsPage() {
             ))}
           </Select>
         </div>
-        {canCreate && selected.length ? (
+          {canCreate && selected.length ? (
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-[#f7f1e6] px-3 py-2 text-sm">
             <p>{selected.length} student{selected.length > 1 ? "s" : ""} selected</p>
             <div className="flex gap-2">
@@ -110,6 +127,9 @@ export default function StudentsPage() {
               </Button>
               <Button type="button" onClick={() => setCreating(true)}>
                 New support
+              </Button>
+              <Button variant="danger" type="button" onClick={deleteSelected}>
+                Delete
               </Button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CreateStudentSupport } from "@/components/create-student-support";
@@ -40,6 +40,7 @@ type SupportRow = {
 
 export default function StudentProfilePage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [lookups, setLookups] = useState<Lookups | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
   const [supports, setSupports] = useState<SupportRow[]>([]);
@@ -117,6 +118,39 @@ export default function StudentProfilePage() {
     }
   }
 
+  async function deleteStudent() {
+    if (!window.confirm(`Delete ${student?.name ?? "this student"} and all their supports?`)) return;
+    try {
+      await api(`/api/students/${params.id}`, { method: "DELETE" });
+      toast.success("Student deleted");
+      router.push("/students");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete student");
+    }
+  }
+
+  async function completeSupports(supportIds: string[]) {
+    const open = supports.filter((item) => supportIds.includes(item.id) && item.status !== "completed" && item.status !== "cancelled");
+    if (!open.length) return toast.error("Select an open support first");
+    const note = window.prompt("Completion note (required)");
+    if (note === null) return;
+    if (!note.trim()) return toast.error("Write a comment before completing");
+    try {
+      await Promise.all(
+        open.map((item) =>
+          api(`/api/supports/${item.id}/status`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: "completed", outcome: note }),
+          })
+        )
+      );
+      toast.success(open.length > 1 ? "Supports completed" : "Support completed");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not complete support");
+    }
+  }
+
   function toggle(id: string) {
     setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
@@ -155,6 +189,9 @@ export default function StudentProfilePage() {
                 {editing ? "Cancel" : "Edit profile"}
               </Button>
               <Button onClick={() => setAddingSupport(true)}>Add support</Button>
+              <Button variant="danger" type="button" onClick={deleteStudent}>
+                Delete
+              </Button>
             </>
           ) : null
         }
@@ -228,6 +265,9 @@ export default function StudentProfilePage() {
               </Select>
               <Button type="button" onClick={() => changeModerator(selected, bulkModerator)}>
                 Change moderator
+              </Button>
+              <Button type="button" onClick={() => completeSupports(selected)}>
+                Complete
               </Button>
               <Button variant="danger" type="button" onClick={() => deleteSupports(selected)}>
                 Delete
@@ -323,9 +363,16 @@ export default function StudentProfilePage() {
                     <td className="px-3 py-3">{item.outcome || "—"}</td>
                     {canEdit ? (
                       <td className="px-3 py-3">
-                        <Button variant="danger" type="button" onClick={() => deleteSupports([item.id])}>
-                          Delete
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          {item.status !== "completed" && item.status !== "cancelled" ? (
+                            <Button type="button" onClick={() => completeSupports([item.id])}>
+                              Complete
+                            </Button>
+                          ) : null}
+                          <Button variant="danger" type="button" onClick={() => deleteSupports([item.id])}>
+                            Delete
+                          </Button>
+                        </div>
                       </td>
                     ) : null}
                   </tr>

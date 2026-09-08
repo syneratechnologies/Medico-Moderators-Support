@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { Button, Card, Field, Input, Select, TableWrap } from "@/components/ui";
 import { api, roleLabel } from "@/lib/client";
 import { formatDate } from "@/lib/utils";
@@ -18,9 +19,13 @@ type UserRow = {
   createdAt: string;
 };
 
+const PAGE_SIZE = 15;
+
 export default function UsersPage() {
   const [items, setItems] = useState<UserRow[]>([]);
   const [me, setMe] = useState<{ role: string } | null>(null);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -66,6 +71,18 @@ export default function UsersPage() {
     }
   }
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((user) =>
+      `${user.name} ${user.email} ${user.phone} ${roleLabel[user.role]}`.toLowerCase().includes(q)
+    );
+  }, [items, query]);
+
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pages);
+  const rows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div>
       <PageHeader title="Team" description="Managers can create and disable moderators. Super Admin can manage every role." />
@@ -90,6 +107,15 @@ export default function UsersPage() {
           </form>
         </Card>
         <Card className="p-5">
+          <Input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Search name, email, phone, role"
+            className="mb-4"
+          />
           <TableWrap>
             <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase text-[#5d6f6b]">
@@ -102,7 +128,7 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((user) => (
+                {rows.map((user) => (
                   <tr key={user.id} className="border-t border-[#eee4d4]">
                     <td className="px-3 py-3">
                       {user.role === "moderator" ? (
@@ -127,6 +153,7 @@ export default function UsersPage() {
               </tbody>
             </table>
           </TableWrap>
+          <Pagination page={currentPage} pages={pages} total={filtered.length} onPage={setPage} />
         </Card>
       </div>
     </div>

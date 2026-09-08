@@ -112,16 +112,16 @@ export default function SupportDetailPage() {
       <Button variant="secondary" className="w-full md:w-auto" disabled={saving || !outcome.trim()} onClick={saveComment}>
         Save comment
       </Button>
-      {support.status === "pending" ? (
-        <Button className="w-full md:w-auto" disabled={saving} onClick={() => updateStatus("in_progress")}>
-          Start work
-        </Button>
-      ) : null}
-      {canWork ? (
-        <Button className="w-full md:w-auto" disabled={saving} onClick={() => updateStatus("completed")}>
-          Mark as completed
-        </Button>
-      ) : null}
+            {support.status === "pending" ? (
+              <Button className="w-full md:w-auto" disabled={saving} onClick={() => updateStatus("in_progress")}>
+                Start work
+              </Button>
+            ) : null}
+            {canWork ? (
+              <Button className="w-full md:w-auto" disabled={saving || !outcome.trim()} onClick={() => updateStatus("completed")}>
+                Mark as completed
+              </Button>
+            ) : null}
       {!isModerator && canWork ? (
         <Button variant="secondary" className="w-full md:w-auto" disabled={saving} onClick={() => updateStatus("cancelled")}>
           Cancel
@@ -217,7 +217,9 @@ export default function SupportDetailPage() {
         <Card className="order-2 p-4 md:p-6 xl:order-1">
           <h2 className="font-[family-name:var(--font-fraunces)] text-xl md:text-2xl">Work & outcome</h2>
           <p className="mt-2 text-sm text-[#5d6f6b]">
-            Start the case, then write a mandatory note before marking it complete.
+            {role === "moderator"
+              ? "Start the case, then write a mandatory note before marking it complete."
+              : "Write a comment, then complete the case. A note is required."}
           </p>
           <div className="mt-5">
             <Field label="Comment / note">
