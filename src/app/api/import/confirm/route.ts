@@ -3,7 +3,7 @@ import { z } from "zod";
 import { jsonError, withAuth } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { findOrCreateLookup } from "@/lib/lookups";
-import { findStudentByNumber, studentPayload } from "@/lib/students";
+import { findStudentByRoll, studentPayload } from "@/lib/students";
 import { Batch } from "@/models/Batch";
 import { Branch } from "@/models/Branch";
 import { Group } from "@/models/Group";
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       findOrCreateLookup(SupportType, String(row.supportType)),
     ]);
 
-    let student = await findStudentByNumber(String(row.studentNumber));
+    let student = await findStudentByRoll(String(row.roll));
     if (!student) {
       student = await (await import("@/models/Student")).Student.create(
         studentPayload({

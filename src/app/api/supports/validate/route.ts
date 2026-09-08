@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { jsonError, withAuth } from "@/lib/api";
 import { isBlankRow, validateSheetRow } from "@/lib/sheet";
-import { normalizeStudentNumber } from "@/lib/utils";
+import { normalizeRoll } from "@/lib/utils";
 import { Student } from "@/models/Student";
 
 const schema = z.object({
@@ -31,11 +31,9 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return jsonError("Invalid sheet rows");
 
-  const numbers = parsed.data.rows
-    .map((row) => normalizeStudentNumber(row.studentNumber))
-    .filter(Boolean);
-  const existing = await Student.find({ studentNumber: { $in: numbers } }).select("studentNumber");
-  const existingSet = new Set(existing.map((item) => item.studentNumber));
+  const rolls = parsed.data.rows.map((row) => normalizeRoll(row.roll ?? "")).filter(Boolean);
+  const existing = await Student.find({ roll: { $in: rolls } }).select("roll");
+  const existingSet = new Set(existing.map((item) => String(item.roll ?? "")).filter(Boolean));
 
   const rows = parsed.data.rows.map((row) => {
     if (isBlankRow(row)) {
@@ -45,6 +43,7 @@ export async function POST(request: Request) {
     return {
       ...row,
       studentNumber: result.studentNumber || row.studentNumber,
+      roll: result.roll || row.roll,
       errors: result.errors,
       isExistingStudent: result.isExistingStudent,
     };

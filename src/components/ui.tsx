@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, isValidPhone, normalizePhone } from "@/lib/utils";
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
@@ -89,4 +89,27 @@ export function Field({
 
 export function TableWrap({ children }: { children: React.ReactNode }) {
   return <div className="overflow-x-auto">{children}</div>;
+}
+
+export function TelLink({
+  value,
+  className,
+}: {
+  value?: string | null;
+  className?: string;
+}) {
+  const display = value?.trim() || "—";
+  const tel = value ? normalizePhone(value) : "";
+  if (!tel || !isValidPhone(value ?? "")) {
+    return <span className={className}>{display}</span>;
+  }
+  return (
+    <a
+      href={`tel:${tel}`}
+      className={cn("font-medium text-[#0f5c56] underline-offset-2 hover:underline", className)}
+      onClick={(event) => event.stopPropagation()}
+    >
+      {display}
+    </a>
+  );
 }

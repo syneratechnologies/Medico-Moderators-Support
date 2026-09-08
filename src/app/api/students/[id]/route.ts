@@ -4,7 +4,7 @@ import { jsonError, withAuth } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { serializeStudent, serializeSupport } from "@/lib/serializers";
 import { studentPayload } from "@/lib/students";
-import { isValidPhone } from "@/lib/utils";
+import { isValidPhone, normalizeRoll } from "@/lib/utils";
 import { Student } from "@/models/Student";
 import { Support } from "@/models/Support";
 
@@ -67,10 +67,10 @@ export async function PATCH(
   if (!student) return jsonError("Student not found", 404);
 
   const duplicate = await Student.findOne({
-    studentNumber: parsed.data.studentNumber.trim().toUpperCase(),
+    roll: normalizeRoll(parsed.data.roll),
     _id: { $ne: id },
   });
-  if (duplicate) return jsonError("Student number already exists", 409);
+  if (duplicate) return jsonError("A student with this roll already exists", 409);
 
   const previous = {
     name: student.name,

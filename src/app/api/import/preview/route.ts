@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, withAuth } from "@/lib/api";
 import { mapRow, readSpreadsheet, suggestMapping, type ImportField } from "@/lib/excel";
-import { isValidPhone, normalizeStudentNumber } from "@/lib/utils";
+import { normalizeRoll } from "@/lib/utils";
 import { Student } from "@/models/Student";
 import { ImportJob } from "@/models/ImportJob";
 
@@ -25,29 +25,17 @@ export async function POST(request: Request) {
     ? (JSON.parse(String(mappingRaw)) as Record<string, ImportField | "">)
     : suggestMapping(headers);
 
-  const studentNumbers = rows
-    .map((row) => normalizeStudentNumber(mapRow(row, mapping).studentNumber ?? ""))
-    .filter(Boolean);
-  const existing = await Student.find({ studentNumber: { $in: studentNumbers } }).select("studentNumber");
-  const existingSet = new Set(existing.map((item) => item.studentNumber));
+  const rolls = rows.map((row) => normalizeRoll(mapRow(row, mapping).roll ?? "")).filter(Boolean);
+  const existing = await Student.find({ roll: { $in: rolls } }).select("roll");
+  const existingSet = new Set(existing.map((item) => String(item.roll ?? "")).filter(Boolean));
 
   const validated = rows.map((row, index) => {
     const mapped = mapRow(row, mapping);
-    const errors: string[] = [];
-    if (!mapped.studentNumber) errors.push("Missing Student Number");
-    if (!mapped.name) errors.push("Missing Name");
-    if (!mapped.roll) errors.push("Missing Roll");
-    if (!mapped.serial) errors.push("Missing Serial");
-    if (!mapped.guardianPhone) errors.push("Missing Guardian Phone");
-    else if (!isValidPhone(mapped.guardianPhone)) errors.push("Invalid Guardian Phone");
-    if (!mapped.branch) errors.push("Missing Branch");
-    if (!mapped.group) errors.push("Missing Group");
-    if (!mapped.batch) errors.push("Missing Batch");
-
-    const studentNumber = mapped.studentNumber ? normalizeStudentNumber(mapped.studentNumber) : "";
+    const roll = mapped.roll ? normalizeRoll(mapped.roll) : "";
+    const studentNumber = mapped.studentNumber ? String(mapped.studentNumber).trim() : "";
     return {
       rowNumber: index + 2,
-      roll: mapped.roll ?? "",
+      roll,
       serial: mapped.serial ?? "",
       name: mapped.name ?? "",
       studentNumber,
@@ -57,8 +45,8 @@ export async function POST(request: Request) {
       batch: mapped.batch ?? "",
       supportType: mapped.supportType || supportTypeName,
       description: mapped.description || description,
-      isExistingStudent: existingSet.has(studentNumber),
-      errors,
+      isExistingStudent: Boolean(roll && existingSet.has(roll)),
+      errors: [] as string[],
     };
   });
 

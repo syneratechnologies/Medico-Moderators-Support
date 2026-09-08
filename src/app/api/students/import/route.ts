@@ -3,8 +3,8 @@ import { z } from "zod";
 import { jsonError, withAuth } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { isBlankRow, validateSheetRow } from "@/lib/sheet";
-import { studentPayload } from "@/lib/students";
-import { normalizeStudentNumber } from "@/lib/utils";
+import { findStudentByRoll, studentPayload } from "@/lib/students";
+import { normalizeRoll } from "@/lib/utils";
 import { Batch } from "@/models/Batch";
 import { Branch } from "@/models/Branch";
 import { Group } from "@/models/Group";
@@ -40,7 +40,7 @@ async function resolveLookupId(
   model: typeof Branch | typeof Group | typeof Batch
 ) {
   const trimmed = value.trim();
-  if (!trimmed) throw new Error("Branch, group and batch cannot be empty");
+  if (!trimmed) return null;
   const existing = maps.byId.get(trimmed) ?? maps.byName.get(trimmed.toLowerCase());
   if (existing) return existing;
   const created = await model.create({ name: trimmed, isActive: true });
@@ -60,9 +60,9 @@ export async function POST(request: Request) {
   const filled = parsed.data.rows.filter((row) => !isBlankRow(row));
   if (!filled.length) return jsonError("Add at least one student row");
 
-  const numbers = filled.map((row) => normalizeStudentNumber(row.studentNumber)).filter(Boolean);
-  const existing = await Student.find({ studentNumber: { $in: numbers } }).select("studentNumber");
-  const existingSet = new Set(existing.map((item) => item.studentNumber));
+  const rolls = filled.map((row) => normalizeRoll(row.roll)).filter(Boolean);
+  const existing = await Student.find({ roll: { $in: rolls } }).select("roll");
+  const existingSet = new Set(existing.map((item) => String(item.roll ?? "")).filter(Boolean));
   const invalid = filled
     .map((row, index) => ({ index, ...validateSheetRow(row, existingSet) }))
     .filter((row) => row.errors.length);
@@ -88,8 +88,8 @@ export async function POST(request: Request) {
 
   try {
     for (const row of filled) {
-      const studentNumber = normalizeStudentNumber(row.studentNumber);
-      if (!studentNumber || existingSet.has(studentNumber) || seen.has(studentNumber)) {
+      const roll = normalizeRoll(row.roll);
+      if (roll && (existingSet.has(roll) || seen.has(roll))) {
         skippedExisting += 1;
         continue;
       }
@@ -102,18 +102,20 @@ export async function POST(request: Request) {
 
       payloads.push(
         studentPayload({
-          roll: row.roll,
+          roll,
           serial: row.serial,
           name: row.name,
-          studentNumber,
+          studentNumber: row.studentNumber,
           guardianPhone: row.guardianPhone,
-          branch,
-          group,
-          batch,
+          branch: branch ?? "",
+          group: group ?? "",
+          batch: batch ?? "",
         })
       );
-      seen.add(studentNumber);
-      existingSet.add(studentNumber);
+      if (roll) {
+        seen.add(roll);
+        existingSet.add(roll);
+      }
     }
 
     if (payloads.length) {
@@ -122,7 +124,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import failed";
     if (message.includes("E11000") || message.includes("duplicate key")) {
-      return jsonError("A student number in this file already exists. Existing students were skipped.");
+      return jsonError("A roll in this file already exists. Existing students were skipped.");
     }
     return jsonError(message, 500);
   }

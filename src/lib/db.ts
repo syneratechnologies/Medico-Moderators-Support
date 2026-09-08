@@ -3,6 +3,7 @@ import path from "path";
 import mongoose from "mongoose";
 import { cleanupBlankSupports } from "./cleanup-supports";
 import { seedDemoData } from "./seed-data";
+import { ensureStudentIdentityIndexes } from "./students";
 
 try {
   setDefaultResultOrder("ipv4first");
@@ -71,6 +72,7 @@ async function afterConnect() {
   }
   if (!cache.cleaned) {
     cache.cleaned = true;
+    await ensureStudentIdentityIndexes();
     const removed = await cleanupBlankSupports();
     if (removed) console.info(`Removed ${removed} blank/orphan support(s)`);
   }

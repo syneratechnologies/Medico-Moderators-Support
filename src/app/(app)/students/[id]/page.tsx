@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { CreateStudentSupport } from "@/components/create-student-support";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { Button, Card, Field, Input, Select, TableWrap } from "@/components/ui";
+import { Button, Card, Field, Input, Select, TableWrap, TelLink } from "@/components/ui";
 import { api } from "@/lib/client";
 import { formatDate } from "@/lib/utils";
 
@@ -237,7 +237,7 @@ export default function StudentProfilePage() {
           ) : (
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <div><dt className="text-[11px] uppercase text-[#5d6f6b]">S-Number</dt><dd className="font-medium">{student.studentNumber}</dd></div>
-              <div><dt className="text-[11px] uppercase text-[#5d6f6b]">G-Number</dt><dd className="font-medium">{student.guardianPhone}</dd></div>
+              <div><dt className="text-[11px] uppercase text-[#5d6f6b]">G-Number</dt><dd><TelLink value={student.guardianPhone} /></dd></div>
               <div><dt className="text-[11px] uppercase text-[#5d6f6b]">Roll / Serial</dt><dd>{student.roll} / {student.serial}</dd></div>
               <div><dt className="text-[11px] uppercase text-[#5d6f6b]">Branch</dt><dd>{student.branch.name}</dd></div>
               <div className="col-span-2"><dt className="text-[11px] uppercase text-[#5d6f6b]">Group / Batch</dt><dd>{student.group.name} · {student.batch.name}</dd></div>

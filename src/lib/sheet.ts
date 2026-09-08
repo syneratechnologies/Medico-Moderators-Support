@@ -1,4 +1,4 @@
-import { isValidPhone, normalizeStudentNumber } from "./utils";
+import { normalizeRoll, normalizeStudentNumber } from "./utils";
 
 export type SheetRow = {
   id: string;
@@ -106,24 +106,15 @@ export function isBlankRow(row: Pick<SheetRow, SheetField>) {
 
 export function validateSheetRow(
   row: Pick<SheetRow, SheetField>,
-  existingNumbers?: Set<string>
+  existingRolls?: Set<string>
 ) {
-  const errors: string[] = [];
-  if (!row.studentNumber.trim()) errors.push("Missing S-Number");
-  if (!row.name.trim()) errors.push("Missing Name");
-  if (!row.roll.trim()) errors.push("Missing Roll");
-  if (!row.serial.trim()) errors.push("Missing Serial");
-  if (!row.guardianPhone.trim()) errors.push("Missing G-Number");
-  else if (!isValidPhone(row.guardianPhone)) errors.push("Invalid G-Number");
-  if (!row.branch.trim()) errors.push("Missing Branch");
-  if (!row.group.trim()) errors.push("Missing Group");
-  if (!row.batch.trim()) errors.push("Missing Batch");
-
+  const roll = normalizeRoll(row.roll);
   const studentNumber = row.studentNumber ? normalizeStudentNumber(row.studentNumber) : "";
   return {
-    errors,
+    errors: [] as string[],
+    roll,
     studentNumber,
-    isExistingStudent: Boolean(studentNumber && existingNumbers?.has(studentNumber)),
+    isExistingStudent: Boolean(roll && existingRolls?.has(roll)),
   };
 }
 
@@ -143,7 +134,7 @@ export function sheetRowPayload(row: SheetRow) {
   return {
     supportId: row.supportId,
     studentId: row.studentId,
-    roll: row.roll.trim(),
+    roll: normalizeRoll(row.roll),
     serial: row.serial.trim(),
     name: row.name.trim(),
     studentNumber: normalizeStudentNumber(row.studentNumber),

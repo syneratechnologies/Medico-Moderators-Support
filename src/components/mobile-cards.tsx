@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
+import { TelLink } from "@/components/ui";
 import { cn, formatDateTime } from "@/lib/utils";
 
 export function SupportQueueCard({
@@ -66,7 +67,9 @@ export function StudentQueueCard({
         <div className="min-w-0">
           <p className="truncate text-base font-semibold leading-snug">{name}</p>
           <p className="mt-0.5 text-sm text-[#5d6f6b]">S-Number {studentNumber}</p>
-          <p className="mt-0.5 text-sm text-[#5d6f6b]">G-Number {guardianPhone}</p>
+          <p className="mt-0.5 text-sm text-[#5d6f6b]">
+            G-Number <TelLink value={guardianPhone} />
+          </p>
           <p className="mt-1 truncate text-xs text-[#5d6f6b]">{placement}</p>
         </div>
         <span

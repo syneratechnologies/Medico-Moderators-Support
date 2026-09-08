@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { CreateStudentSupport } from "@/components/create-student-support";
 import { StudentQueueCard } from "@/components/mobile-cards";
 import { PageHeader } from "@/components/page-header";
-import { Button, Card, Input, Select, TableWrap } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
+import { Button, Card, Input, Select, TableWrap, TelLink } from "@/components/ui";
 import { api } from "@/lib/client";
 
 type Lookups = {
@@ -38,11 +39,16 @@ export default function StudentsPage() {
   const [canCreate, setCanCreate] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
 
   async function load() {
-    const params = new URLSearchParams({ q, branch, group, batch, limit: "50" });
-    const data = await api<{ items: Student[] }>(`/api/students?${params}`);
+    const params = new URLSearchParams({ q, branch, group, batch, limit: "50", page: String(page) });
+    const data = await api<{ items: Student[]; total: number; pages: number; page: number }>(`/api/students?${params}`);
     setItems(data.items);
+    setTotal(data.total);
+    setPages(Math.max(1, data.pages || 1));
   }
 
   useEffect(() => {
@@ -54,7 +60,7 @@ export default function StudentsPage() {
 
   useEffect(() => {
     load().catch(() => {});
-  }, [q, branch, group, batch]);
+  }, [q, branch, group, batch, page]);
 
   async function deleteSelected() {
     if (!selected.length) return;
@@ -76,7 +82,7 @@ export default function StudentsPage() {
     <div>
       <PageHeader
         title="Students"
-        description="Permanent profiles. Every support stays attached to the same student."
+        description="Each roll is unique. Supports stay on that same student."
         actions={
           canCreate ? (
             <div className="flex flex-wrap gap-2">
@@ -97,21 +103,28 @@ export default function StudentsPage() {
       <Card className="p-3 md:p-4">
         <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="col-span-2 md:col-span-1">
-            <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Name, roll, S-Number, G-Number" />
+            <Input
+              value={q}
+              onChange={(event) => {
+                setQ(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Name, roll, S-Number, G-Number"
+            />
           </div>
-          <Select value={branch} onChange={(event) => setBranch(event.target.value)}>
+          <Select value={branch} onChange={(event) => { setBranch(event.target.value); setPage(1); }}>
             <option value="">All branches</option>
             {lookups?.branches.map((item) => (
               <option key={item.id} value={item.id}>{item.name}</option>
             ))}
           </Select>
-          <Select value={group} onChange={(event) => setGroup(event.target.value)}>
+          <Select value={group} onChange={(event) => { setGroup(event.target.value); setPage(1); }}>
             <option value="">All groups</option>
             {lookups?.groups.map((item) => (
               <option key={item.id} value={item.id}>{item.name}</option>
             ))}
           </Select>
-          <Select value={batch} onChange={(event) => setBatch(event.target.value)}>
+          <Select value={batch} onChange={(event) => { setBatch(event.target.value); setPage(1); }}>
             <option value="">All batches</option>
             {lookups?.batches.map((item) => (
               <option key={item.id} value={item.id}>{item.name}</option>
@@ -212,7 +225,7 @@ export default function StudentsPage() {
                   </td>
                   <td className="px-3 py-3">{student.roll} / {student.serial}</td>
                   <td className="px-3 py-3">
-                    <p className="font-medium">{student.guardianPhone}</p>
+                    <TelLink value={student.guardianPhone} />
                     <p className="text-xs text-[#5d6f6b]">Guardian</p>
                   </td>
                   <td className="px-3 py-3">
@@ -236,6 +249,7 @@ export default function StudentsPage() {
           </table>
         </TableWrap>
         </div>
+        <Pagination page={page} pages={pages} total={total} onPage={setPage} />
       </Card>
       <CreateStudentSupport
         students={items.filter((item) => selected.includes(item.id))}

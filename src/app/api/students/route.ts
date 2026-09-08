@@ -4,7 +4,7 @@ import { jsonError, parseSearchParams, withAuth } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { escapeRegex } from "@/lib/lookups";
 import { serializeStudent } from "@/lib/serializers";
-import { findStudentByNumber, studentPayload } from "@/lib/students";
+import { findStudentByRoll, studentPayload } from "@/lib/students";
 import { isValidPhone } from "@/lib/utils";
 import { Student } from "@/models/Student";
 import { Support } from "@/models/Support";
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   const group = params.get("group") ?? "";
   const batch = params.get("batch") ?? "";
   const page = Math.max(1, Number(params.get("page") ?? 1));
-  const limit = Math.min(100, Math.max(10, Number(params.get("limit") ?? 20)));
+  const limit = Math.min(200, Math.max(10, Number(params.get("limit") ?? 50)));
 
   const filter: Record<string, unknown> = {};
   if (branch) filter.branch = branch;
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
   const [items, total] = await Promise.all([
     Student.find(filter)
       .populate("branch group batch")
-      .sort({ updatedAt: -1 })
+      .sort({ roll: 1, name: 1, createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
@@ -95,8 +95,8 @@ export async function POST(request: Request) {
   if (!parsed.success) return jsonError("All student fields are required");
   if (!isValidPhone(parsed.data.guardianPhone)) return jsonError("Invalid guardian phone");
 
-  const existing = await findStudentByNumber(parsed.data.studentNumber);
-  if (existing) return jsonError("Student number already exists", 409);
+  const existing = await findStudentByRoll(parsed.data.roll);
+  if (existing) return jsonError("A student with this roll already exists", 409);
 
   const student = await Student.create(studentPayload(parsed.data));
   await student.populate("branch group batch");

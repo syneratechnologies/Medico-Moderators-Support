@@ -5,7 +5,7 @@ import { logActivity } from "@/lib/activity";
 import { findOrCreateLookup } from "@/lib/lookups";
 import { isBlankRow, validateSheetRow } from "@/lib/sheet";
 import { resolveStudent } from "@/lib/students";
-import { normalizeStudentNumber } from "@/lib/utils";
+import { normalizeRoll } from "@/lib/utils";
 import { Batch } from "@/models/Batch";
 import { Branch } from "@/models/Branch";
 import { Group } from "@/models/Group";
@@ -39,9 +39,9 @@ export async function POST(request: Request) {
   const filled = parsed.data.rows.filter((row) => !isBlankRow(row));
   if (!filled.length) return jsonError("Add at least one support row");
 
-  const numbers = filled.map((row) => normalizeStudentNumber(row.studentNumber)).filter(Boolean);
-  const existing = await Student.find({ studentNumber: { $in: numbers } }).select("studentNumber");
-  const existingSet = new Set(existing.map((item) => item.studentNumber));
+  const rolls = filled.map((row) => normalizeRoll(row.roll)).filter(Boolean);
+  const existing = await Student.find({ roll: { $in: rolls } }).select("roll");
+  const existingSet = new Set(existing.map((item) => String(item.roll ?? "")).filter(Boolean));
   const invalid = filled
     .map((row, index) => ({ index, ...validateSheetRow(row, existingSet) }))
     .filter((row) => row.errors.length);
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       });
       if (resolved.created) createdStudents += 1;
       const student = resolved.student;
-      if (!student?.name?.trim() || !normalizeStudentNumber(row.studentNumber)) {
+      if (!student || (!student.name?.trim() && !normalizeRoll(row.roll))) {
         continue;
       }
 

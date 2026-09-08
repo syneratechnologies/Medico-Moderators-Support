@@ -4,7 +4,7 @@ import { jsonError, parseSearchParams, withAuth } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { findOrCreateLookup } from "@/lib/lookups";
 import { serializeSupport } from "@/lib/serializers";
-import { findStudentByNumber, studentPayload } from "@/lib/students";
+import { findStudentByRoll, studentPayload } from "@/lib/students";
 import { isValidPhone } from "@/lib/utils";
 import { Student } from "@/models/Student";
 import { Support } from "@/models/Support";
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return jsonError("Required support fields are missing");
   if (!isValidPhone(parsed.data.guardianPhone)) return jsonError("Invalid guardian phone");
 
-  let student = await findStudentByNumber(parsed.data.studentNumber);
+  let student = await findStudentByRoll(parsed.data.roll);
   let createdStudent = false;
   if (!student) {
     student = await Student.create(studentPayload(parsed.data));

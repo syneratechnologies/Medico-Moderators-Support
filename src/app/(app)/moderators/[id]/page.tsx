@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { CreateStudentSupport } from "@/components/create-student-support";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button, Card, Select, TableWrap } from "@/components/ui";
@@ -55,6 +56,7 @@ export default function ModeratorDetailPage() {
   const [moderators, setModerators] = useState<Array<{ id: string; name: string }>>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [target, setTarget] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const rows = useMemo(() => sortSupports(items), [items]);
   const active = rows.filter((item) => item.status === "pending" || item.status === "in_progress");
@@ -118,9 +120,14 @@ export default function ModeratorDetailPage() {
         title={moderator.name}
         description={`${moderator.email}${moderator.phone ? ` · ${moderator.phone}` : ""} · ${moderator.isActive ? "Active" : "Disabled"}`}
         actions={
-          <Link href="/moderators">
-            <Button variant="secondary">All moderators</Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={() => setCreating(true)}>
+              New support
+            </Button>
+            <Link href="/moderators">
+              <Button variant="secondary">All moderators</Button>
+            </Link>
+          </div>
         }
       />
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -181,6 +188,15 @@ export default function ModeratorDetailPage() {
           onToggleAll={() => toggleAll(finished)}
         />
       </div>
+      <CreateStudentSupport
+        open={creating}
+        defaultModeratorId={moderator.id}
+        lockModerator
+        onClose={() => setCreating(false)}
+        onCreated={() => {
+          load().catch(() => {});
+        }}
+      />
     </div>
   );
 }

@@ -4,8 +4,8 @@ import { jsonError, withAuth } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { findOrCreateLookup } from "@/lib/lookups";
 import { isBlankRow, validateSheetRow } from "@/lib/sheet";
-import { findStudentByNumber, studentPayload } from "@/lib/students";
-import { normalizeStudentNumber } from "@/lib/utils";
+import { findStudentByRoll, studentPayload } from "@/lib/students";
+import { normalizeRoll } from "@/lib/utils";
 import { Batch } from "@/models/Batch";
 import { Branch } from "@/models/Branch";
 import { Group } from "@/models/Group";
@@ -41,9 +41,9 @@ export async function POST(request: Request) {
   const filled = parsed.data.rows.filter((row) => !isBlankRow(row));
   if (!filled.length) return jsonError("Add at least one support row");
 
-  const numbers = filled.map((row) => normalizeStudentNumber(row.studentNumber)).filter(Boolean);
-  const existing = await Student.find({ studentNumber: { $in: numbers } }).select("studentNumber");
-  const existingSet = new Set(existing.map((item) => item.studentNumber));
+  const rolls = filled.map((row) => normalizeRoll(row.roll)).filter(Boolean);
+  const existing = await Student.find({ roll: { $in: rolls } }).select("roll");
+  const existingSet = new Set(existing.map((item) => String(item.roll ?? "")).filter(Boolean));
 
   const invalid = filled
     .map((row, index) => ({ index, ...validateSheetRow(row, existingSet) }))
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       findOrCreateLookup(SupportType, row.supportType),
     ]);
 
-    let student = await findStudentByNumber(row.studentNumber);
+    let student = await findStudentByRoll(row.roll);
     if (!student) {
       student = await Student.create(
         studentPayload({
