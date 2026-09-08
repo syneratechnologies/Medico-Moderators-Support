@@ -3,6 +3,15 @@ import { Branch } from "@/models/Branch";
 import { Group } from "@/models/Group";
 import { SupportType } from "@/models/SupportType";
 
+export const LOOKUP_MODELS = {
+  branch: Branch,
+  group: Group,
+  batch: Batch,
+  supportType: SupportType,
+} as const;
+
+export type LookupKind = keyof typeof LOOKUP_MODELS;
+
 export async function resolveLookup(
   model: typeof Branch | typeof Group | typeof Batch | typeof SupportType,
   value: string
