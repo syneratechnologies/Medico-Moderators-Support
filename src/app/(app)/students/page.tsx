@@ -220,7 +220,9 @@ export default function StudentsPage() {
                     )}
                   </td>
                   <td className="px-3 py-3">
-                    <p className="font-medium">{student.studentNumber}</p>
+                    <p className="font-medium">
+                      <TelLink value={student.studentNumber} />
+                    </p>
                     <p className="text-xs text-[#5d6f6b]">Student</p>
                   </td>
                   <td className="px-3 py-3">{student.roll} / {student.serial}</td>

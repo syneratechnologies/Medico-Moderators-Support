@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { Button, Card, Field, Select, TelLink, Textarea } from "@/components/ui";
+import { Button, CallButton, Card, Field, Select, Textarea } from "@/components/ui";
 import { api } from "@/lib/client";
 import { formatDateTime } from "@/lib/utils";
 
@@ -158,11 +158,11 @@ export default function SupportDetailPage() {
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-[11px] uppercase text-[#5d6f6b]">S-Number</p>
-                <p className="font-medium">{support.student.studentNumber}</p>
+                <p className="font-medium">{support.student.studentNumber || "—"}</p>
               </div>
               <div>
                 <p className="text-[11px] uppercase text-[#5d6f6b]">G-Number</p>
-                <p><TelLink value={support.student.guardianPhone} /></p>
+                <p className="font-medium">{support.student.guardianPhone || "—"}</p>
               </div>
               <div>
                 <p className="text-[11px] uppercase text-[#5d6f6b]">Roll / Serial</p>
@@ -176,6 +176,10 @@ export default function SupportDetailPage() {
             <p className="mt-2 text-xs text-[#5d6f6b]">
               {support.student.group?.name} · {support.student.batch?.name}
             </p>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-white">
+              <CallButton label="Call student" value={support.student.studentNumber} />
+              <CallButton label="Call guardian" value={support.student.guardianPhone} />
+            </div>
           </Card>
           <Card className="p-4 text-sm md:p-5">
             <p>Created by {support.createdBy.name}</p>

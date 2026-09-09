@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { SupportQueueCard } from "@/components/mobile-cards";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { Button, Card, Input, Select, TableWrap } from "@/components/ui";
+import { Button, Card, Input, Select, TableWrap, TelLink } from "@/components/ui";
 import { api } from "@/lib/client";
 import { formatDateTime } from "@/lib/utils";
 
@@ -170,7 +170,9 @@ function Section({
                 rows.map((item) => (
                   <tr key={item.id} className="border-t border-[#eee4d4]">
                     <td className="px-3 py-3 font-medium">{item.student.name}</td>
-                    <td className="px-3 py-3">{item.student.studentNumber}</td>
+                    <td className="px-3 py-3">
+                      <TelLink value={item.student.studentNumber} />
+                    </td>
                     <td className="px-3 py-3">{item.supportType.name}</td>
                     <td className="px-3 py-3">
                       <StatusBadge value={item.status} />

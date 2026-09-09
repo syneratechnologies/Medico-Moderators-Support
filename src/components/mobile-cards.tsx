@@ -29,7 +29,12 @@ export function SupportQueueCard({
         <div className="min-w-0">
           <p className="truncate text-base font-semibold leading-snug">{studentName || "Student"}</p>
           <p className="mt-0.5 truncate text-sm text-[#5d6f6b]">
-            {studentNumber ? `${studentNumber} · ` : ""}
+            {studentNumber ? (
+              <>
+                <TelLink value={studentNumber} />
+                {" · "}
+              </>
+            ) : null}
             {supportType}
           </p>
           {when ? <p className="mt-1 text-xs text-[#5d6f6b]">{formatDateTime(when)}</p> : null}
@@ -66,7 +71,9 @@ export function StudentQueueCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-base font-semibold leading-snug">{name}</p>
-          <p className="mt-0.5 text-sm text-[#5d6f6b]">S-Number {studentNumber}</p>
+          <p className="mt-0.5 text-sm text-[#5d6f6b]">
+            S-Number <TelLink value={studentNumber} />
+          </p>
           <p className="mt-0.5 text-sm text-[#5d6f6b]">
             G-Number <TelLink value={guardianPhone} />
           </p>

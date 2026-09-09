@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { CreateStudentSupport } from "@/components/create-student-support";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { Button, Card, Select, TableWrap } from "@/components/ui";
+import { Button, Card, Select, TableWrap, TelLink } from "@/components/ui";
 import { api } from "@/lib/client";
 import { formatDateTime } from "@/lib/utils";
 
@@ -264,7 +264,9 @@ function Section({
                       item.student.name
                     )}
                   </td>
-                  <td className="px-3 py-3">{item.student.studentNumber}</td>
+                  <td className="px-3 py-3">
+                    <TelLink value={item.student.studentNumber} />
+                  </td>
                   <td className="px-3 py-3">
                     <Link href={`/supports/${item.id}`} className="hover:underline">
                       {item.supportType.name}

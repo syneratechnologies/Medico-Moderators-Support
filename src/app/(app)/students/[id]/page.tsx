@@ -236,7 +236,7 @@ export default function StudentProfilePage() {
             </div>
           ) : (
             <dl className="grid grid-cols-2 gap-3 text-sm">
-              <div><dt className="text-[11px] uppercase text-[#5d6f6b]">S-Number</dt><dd className="font-medium">{student.studentNumber}</dd></div>
+              <div><dt className="text-[11px] uppercase text-[#5d6f6b]">S-Number</dt><dd className="font-medium"><TelLink value={student.studentNumber} /></dd></div>
               <div><dt className="text-[11px] uppercase text-[#5d6f6b]">G-Number</dt><dd><TelLink value={student.guardianPhone} /></dd></div>
               <div><dt className="text-[11px] uppercase text-[#5d6f6b]">Roll / Serial</dt><dd>{student.roll} / {student.serial}</dd></div>
               <div><dt className="text-[11px] uppercase text-[#5d6f6b]">Branch</dt><dd>{student.branch.name}</dd></div>

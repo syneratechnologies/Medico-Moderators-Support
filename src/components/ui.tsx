@@ -113,3 +113,30 @@ export function TelLink({
     </a>
   );
 }
+
+export function CallButton({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value?: string | null;
+  className?: string;
+}) {
+  const tel = value ? normalizePhone(value) : "";
+  const ok = Boolean(tel && isValidPhone(value ?? ""));
+  const styles =
+    "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition";
+  if (!ok) {
+    return (
+      <span className={cn(styles, "cursor-not-allowed bg-[#0f5c56]/40 text-white", className)}>
+        {label}
+      </span>
+    );
+  }
+  return (
+    <a href={`tel:${tel}`} className={cn(styles, "bg-[#0f5c56] text-white hover:bg-[#0b3b38]", className)}>
+      {label}
+    </a>
+  );
+}
