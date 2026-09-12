@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ChangePassword } from "@/components/change-password";
 import { CreateStudentSupport } from "@/components/create-student-support";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button, Card, Select, TableWrap, TelLink } from "@/components/ui";
 import { api } from "@/lib/client";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, shortPlacement } from "@/lib/utils";
 
 type Moderator = {
   id: string;
@@ -17,6 +18,16 @@ type Moderator = {
   email: string;
   phone: string;
   isActive: boolean;
+};
+
+type CommentDelete = {
+  supportId: string;
+  commentId: string;
+  text: string;
+  requestedAt: string | null;
+  requestedBy: { id: string; name: string };
+  student: { id: string; name: string };
+  supportType: string;
 };
 
 type SupportRow = {
@@ -28,7 +39,14 @@ type SupportRow = {
   assignedAt: string | null;
   completedAt: string | null;
   supportType: { name: string };
-  student: { id?: string; name?: string; studentNumber?: string };
+  student: {
+    id?: string;
+    name?: string;
+    studentNumber?: string;
+    branch?: { name?: string };
+    group?: { name?: string };
+    batch?: { name?: string };
+  };
 };
 
 const STAGE_ORDER: Record<string, number> = {
@@ -51,12 +69,19 @@ function sortSupports(items: SupportRow[]) {
 export default function ModeratorDetailPage() {
   const params = useParams<{ id: string }>();
   const [moderator, setModerator] = useState<Moderator | null>(null);
-  const [stats, setStats] = useState({ total: 0, pending: 0, inProgress: 0, completed: 0, cancelled: 0 });
+  const [stats, setStats] = useState({ total: 0, pending: 0, inProgress: 0, completed: 0, cancelled: 0, students: 0 });
+  const [placement, setPlacement] = useState<{
+    branches: Array<{ name: string; count: number }>;
+    groups: Array<{ name: string; count: number }>;
+    batches: Array<{ name: string; count: number }>;
+  }>({ branches: [], groups: [], batches: [] });
   const [items, setItems] = useState<SupportRow[]>([]);
   const [moderators, setModerators] = useState<Array<{ id: string; name: string }>>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [target, setTarget] = useState("");
   const [creating, setCreating] = useState(false);
+  const [commentDeletes, setCommentDeletes] = useState<CommentDelete[]>([]);
+  const [reviewing, setReviewing] = useState<string | null>(null);
 
   const rows = useMemo(() => sortSupports(items), [items]);
   const active = rows.filter((item) => item.status === "pending" || item.status === "in_progress");
@@ -64,12 +89,14 @@ export default function ModeratorDetailPage() {
 
   async function load() {
     const [profile, supports, users] = await Promise.all([
-      api<{ user: Moderator; stats: typeof stats }>(`/api/users/${params.id}`),
+      api<{ user: Moderator; stats: typeof stats; placement?: typeof placement; commentDeletes?: CommentDelete[] }>(`/api/users/${params.id}`),
       api<{ items: SupportRow[] }>(`/api/supports?moderator=${params.id}&limit=500`),
       api<Array<{ id: string; name: string }>>("/api/users?role=moderator"),
     ]);
     setModerator(profile.user);
     setStats(profile.stats);
+    setPlacement(profile.placement ?? { branches: [], groups: [], batches: [] });
+    setCommentDeletes(profile.commentDeletes ?? []);
     setItems(supports.items);
     setModerators(users.filter((item) => item.id !== params.id));
     if (!target && users.find((item) => item.id !== params.id)) {
@@ -111,6 +138,22 @@ export default function ModeratorDetailPage() {
     }
   }
 
+  async function reviewDelete(item: CommentDelete, decision: "approve" | "reject") {
+    setReviewing(item.commentId);
+    try {
+      await api(`/api/supports/${item.supportId}/comment`, {
+        method: "PUT",
+        body: JSON.stringify({ commentId: item.commentId, decision }),
+      });
+      toast.success(decision === "approve" ? "Comment deleted" : "Delete request rejected");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not review delete");
+    } finally {
+      setReviewing(null);
+    }
+  }
+
   if (!moderator) return <p>Loading moderator…</p>;
 
   return (
@@ -121,6 +164,7 @@ export default function ModeratorDetailPage() {
         description={`${moderator.email}${moderator.phone ? ` · ${moderator.phone}` : ""} · ${moderator.isActive ? "Active" : "Disabled"}`}
         actions={
           <div className="flex flex-wrap gap-2">
+            <ChangePassword userId={moderator.id} />
             <Button type="button" onClick={() => setCreating(true)}>
               New support
             </Button>
@@ -130,8 +174,9 @@ export default function ModeratorDetailPage() {
           </div>
         }
       />
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {[
+          ["Students", stats.students],
           ["Assigned", stats.total],
           ["Pending", stats.pending],
           ["In progress", stats.inProgress],
@@ -144,6 +189,72 @@ export default function ModeratorDetailPage() {
           </Card>
         ))}
       </div>
+
+      <div className="mb-4 grid gap-4 md:grid-cols-3">
+        {[
+          ["Branch", placement.branches],
+          ["Group", placement.groups],
+          ["Batch", placement.batches],
+        ].map(([title, rows]) => (
+          <Card key={String(title)} className="p-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-[#5d6f6b]">{String(title)}</h2>
+            <p className="mt-1 text-xs text-[#5d6f6b]">Students assigned to this moderator</p>
+            <div className="mt-3 space-y-2">
+              {(rows as Array<{ name: string; count: number }>).length ? (
+                (rows as Array<{ name: string; count: number }>).map((item) => (
+                  <div key={item.name} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="truncate">{item.name}</span>
+                    <span className="shrink-0 font-medium">{item.count}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-[#5d6f6b]">None yet.</p>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="mb-4 p-4">
+        <h2 className="font-[family-name:var(--font-fraunces)] text-2xl">Comment delete requests</h2>
+        <p className="mt-1 text-xs text-[#5d6f6b]">
+          Moderator-requested deletes wait here until a manager approves or rejects them.
+        </p>
+        <div className="mt-4 space-y-3">
+          {commentDeletes.length ? (
+            commentDeletes.map((item) => (
+              <div key={`${item.supportId}-${item.commentId}`} className="rounded-2xl border border-[#eee6d8] bg-[#fbf7f0] px-3 py-3">
+                <p className="whitespace-pre-wrap text-sm">{item.text}</p>
+                <p className="mt-2 text-xs text-[#5d6f6b]">
+                  {item.student.name} · {item.supportType} · requested by {item.requestedBy.name} · {formatDateTime(item.requestedAt)}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link href={`/supports/${item.supportId}`}>
+                    <Button type="button" variant="secondary">Open support</Button>
+                  </Link>
+                  <Button
+                    type="button"
+                    disabled={reviewing === item.commentId}
+                    onClick={() => reviewDelete(item, "approve")}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={reviewing === item.commentId}
+                    onClick={() => reviewDelete(item, "reject")}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-[#5d6f6b]">No delete requests waiting.</p>
+          )}
+        </div>
+      </Card>
 
       <Card className="mb-4 p-4">
         <div className="flex flex-wrap items-end gap-2">
@@ -242,6 +353,7 @@ function Section({
               </th>
               <th className="px-3 py-2">Student</th>
               <th className="px-3 py-2">S-Number</th>
+              <th className="px-3 py-2">Branch / Group / Batch</th>
               <th className="px-3 py-2">Support</th>
               <th className="px-3 py-2">Stage</th>
               <th className="px-3 py-2">Assigned</th>
@@ -267,6 +379,9 @@ function Section({
                   <td className="px-3 py-3">
                     <TelLink value={item.student.studentNumber} />
                   </td>
+                  <td className="px-3 py-3 text-[#5d6f6b]">
+                    {shortPlacement([item.student.branch?.name, item.student.group?.name, item.student.batch?.name])}
+                  </td>
                   <td className="px-3 py-3">
                     <Link href={`/supports/${item.id}`} className="hover:underline">
                       {item.supportType.name}
@@ -281,7 +396,7 @@ function Section({
               ))
             ) : (
               <tr>
-                <td className="px-3 py-6 text-[#5d6f6b]" colSpan={7}>
+                <td className="px-3 py-6 text-[#5d6f6b]" colSpan={8}>
                   No cases in this section.
                 </td>
               </tr>

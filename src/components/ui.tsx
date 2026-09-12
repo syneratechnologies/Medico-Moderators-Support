@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { cn, isValidPhone, normalizePhone } from "@/lib/utils";
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -17,7 +19,7 @@ export function Button({
   variant?: "primary" | "secondary" | "ghost" | "danger";
 }) {
   const styles = {
-    primary: "bg-[#0f5c56] text-white hover:bg-[#0b3b38]",
+    primary: "bg-[#0f5c56] !text-white hover:bg-[#0b3b38]",
     secondary: "bg-white text-[#17302c] border border-[#ddd4c4] hover:bg-[#f7f1e6]",
     ghost: "bg-transparent text-[#17302c] hover:bg-[#efe7d8]",
     danger: "bg-[#b24a45] text-white hover:bg-[#933933]",
@@ -45,6 +47,33 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
         props.className
       )}
     />
+  );
+}
+
+export function PasswordInput({
+  className,
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        {...props}
+        type={visible ? "text" : "password"}
+        className={cn(
+          "min-h-11 w-full rounded-2xl border border-[#ddd4c4] bg-white px-3.5 py-2.5 pr-12 text-base outline-none ring-[#0f5c56]/20 focus:ring-4 md:text-sm",
+          className
+        )}
+      />
+      <button
+        type="button"
+        aria-label={visible ? "Hide password" : "Show password"}
+        onClick={() => setVisible((current) => !current)}
+        className="absolute top-1/2 right-2 flex min-h-9 min-w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#5d6f6b] hover:bg-[#f7f1e6]"
+      >
+        {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </div>
   );
 }
 
@@ -129,13 +158,13 @@ export function CallButton({
     "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition";
   if (!ok) {
     return (
-      <span className={cn(styles, "cursor-not-allowed bg-[#0f5c56]/40 text-white", className)}>
+      <span className={cn(styles, "cursor-not-allowed bg-[#0f5c56]/40 !text-white", className)}>
         {label}
       </span>
     );
   }
   return (
-    <a href={`tel:${tel}`} className={cn(styles, "bg-[#0f5c56] text-white hover:bg-[#0b3b38]", className)}>
+    <a href={`tel:${tel}`} className={cn(styles, "bg-[#0f5c56] !text-white hover:bg-[#0b3b38]", className)}>
       {label}
     </a>
   );

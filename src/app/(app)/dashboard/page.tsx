@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ChangePassword } from "@/components/change-password";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Card } from "@/components/ui";
@@ -33,9 +34,13 @@ type DashboardData = {
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [me, setMe] = useState<{ id: string; role: string } | null>(null);
 
   useEffect(() => {
     api<DashboardData>("/api/dashboard").then(setData);
+    api<{ user: { id: string; role: string } }>("/api/auth/me")
+      .then((session) => setMe(session.user))
+      .catch(() => {});
   }, []);
 
   if (!data) return <p>Loading dashboard…</p>;
@@ -65,13 +70,16 @@ export default function DashboardPage() {
         title={data.role === "moderator" ? "My support queue" : "Support command"}
         description="Live snapshot of student support work across Medico."
         actions={
-          data.role === "moderator" ? (
-            <Link href="/my-supports" className="w-full md:w-auto">
-              <span className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#0f5c56] px-4 text-sm font-medium text-white md:w-auto">
-                Open supports
-              </span>
-            </Link>
-          ) : null
+          <div className="flex flex-wrap gap-2">
+            {me ? <ChangePassword userId={me.id} /> : null}
+            {data.role === "moderator" ? (
+              <Link href="/my-supports" className="w-full md:w-auto">
+                <span className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#0f5c56] px-4 text-sm font-medium text-white md:w-auto">
+                  Open supports
+                </span>
+              </Link>
+            ) : null}
+          </div>
         }
       />
       <div className={data.role === "moderator" ? "grid grid-cols-2 gap-3" : "grid gap-4 sm:grid-cols-2 xl:grid-cols-3"}>

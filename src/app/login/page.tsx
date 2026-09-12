@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { api } from "@/lib/client";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, PasswordInput } from "@/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -62,7 +62,7 @@ export default function LoginPage() {
           <h2 className="mt-2 font-[family-name:var(--font-fraunces)] text-[1.75rem] md:text-3xl">Welcome back</h2>
           <div className="mt-6 space-y-4">
             <Input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email or phone" type="text" autoComplete="username" />
-            <Input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" type="password" autoComplete="current-password" />
+            <PasswordInput value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" autoComplete="current-password" />
             <Button className="min-h-12 w-full" disabled={loading}>
               {loading ? "Checking…" : "Enter dashboard"}
             </Button>

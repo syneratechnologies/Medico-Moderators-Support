@@ -1,3 +1,5 @@
+import { hydrateComments, lastCommentText } from "./support-comments";
+
 function idOf(value: unknown) {
   if (!value) return "";
   if (typeof value === "object" && value !== null && "_id" in value) {
@@ -30,6 +32,23 @@ export function serializeStudent(student: Record<string, unknown>) {
   };
 }
 
+function commentList(support: Record<string, unknown>) {
+  return hydrateComments(support).map((item, index) => {
+    const raw = item as Record<string, unknown>;
+    return {
+      id: idOf(raw._id) || `legacy-${index}`,
+      text: String(item.text ?? ""),
+      createdAt: item.createdAt ?? null,
+      updatedAt: item.updatedAt ?? null,
+      deleteStatus: item.deleteStatus === "pending" ? "pending" : "",
+      deleteRequestedAt: item.deleteRequestedAt ?? null,
+      createdBy: item.createdBy
+        ? { id: idOf(item.createdBy), name: nameOf(item.createdBy) || "Team" }
+        : { id: "", name: "Team" },
+    };
+  });
+}
+
 export function serializeSupport(support: Record<string, unknown>) {
   const student = support.student as Record<string, unknown> | undefined;
   return {
@@ -59,7 +78,8 @@ export function serializeSupport(support: Record<string, unknown>) {
     status: support.status,
     priority: support.priority,
     dueDate: support.dueDate ?? null,
-    outcome: support.outcome ?? "",
+    outcome: lastCommentText(support),
+    comments: commentList(support),
     completedAt: support.completedAt ?? null,
     completedBy: support.completedBy
       ? { id: idOf(support.completedBy), name: nameOf(support.completedBy) }

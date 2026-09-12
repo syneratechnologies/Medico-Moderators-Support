@@ -3,6 +3,7 @@ import { z } from "zod";
 import { jsonError, withAuth } from "@/lib/api";
 import { logActivity } from "@/lib/activity";
 import { serializeSupport } from "@/lib/serializers";
+import { persistComments } from "@/lib/support-comments";
 import { Support } from "@/models/Support";
 
 const schema = z.object({
@@ -10,7 +11,14 @@ const schema = z.object({
   outcome: z.string().optional(),
 });
 
-const populate = "student supportType assignedModerator createdBy completedBy student.branch student.group student.batch";
+const populate = [
+  { path: "student", populate: [{ path: "branch" }, { path: "group" }, { path: "batch" }] },
+  { path: "supportType" },
+  { path: "assignedModerator" },
+  { path: "createdBy" },
+  { path: "completedBy" },
+  { path: "comments.createdBy" },
+];
 
 export async function PATCH(
   request: Request,
@@ -34,16 +42,40 @@ export async function PATCH(
     }
   }
 
+  persistComments(support);
+  const note = parsed.data.outcome?.trim() ?? "";
+
   if (parsed.data.status === "completed") {
-    const outcome = parsed.data.outcome?.trim() ?? "";
-    if (!outcome) return jsonError("Outcome / note is mandatory before completing support");
-    support.outcome = outcome;
+    if (!note && !String(support.outcome ?? "").trim()) {
+      return jsonError("Outcome / note is mandatory before completing support");
+    }
+    if (note) {
+      const last = support.comments?.[support.comments.length - 1];
+      if (!last || last.text.trim() !== note) {
+        support.comments = support.comments ?? [];
+        support.comments.push({
+          text: note,
+          createdBy: user.id as never,
+          createdAt: new Date(),
+        });
+      }
+      support.outcome = note;
+    }
     support.completedAt = new Date();
     support.completedBy = user.id as never;
   }
 
-  if (parsed.data.status === "in_progress" && parsed.data.outcome?.trim()) {
-    support.outcome = parsed.data.outcome.trim();
+  if (parsed.data.status === "in_progress" && note) {
+    const last = support.comments?.[support.comments.length - 1];
+    if (!last || last.text.trim() !== note) {
+      support.comments = support.comments ?? [];
+      support.comments.push({
+        text: note,
+        createdBy: user.id as never,
+        createdAt: new Date(),
+      });
+    }
+    support.outcome = note;
   }
 
   const previous = support.status;

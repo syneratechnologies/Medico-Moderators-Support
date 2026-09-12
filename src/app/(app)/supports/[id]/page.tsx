@@ -2,13 +2,22 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button, CallButton, Card, Field, Select, Textarea } from "@/components/ui";
 import { api } from "@/lib/client";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, shortPlacement } from "@/lib/utils";
+
+type Comment = {
+  id: string;
+  text: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  deleteStatus?: string;
+  createdBy: { id: string; name: string };
+};
 
 type Support = {
   id: string;
@@ -16,6 +25,7 @@ type Support = {
   priority: string;
   description: string;
   outcome: string;
+  comments?: Comment[];
   createdAt: string;
   assignedAt: string | null;
   completedAt: string | null;
@@ -39,7 +49,8 @@ type Support = {
 export default function SupportDetailPage() {
   const params = useParams<{ id: string }>();
   const [support, setSupport] = useState<Support | null>(null);
-  const [outcome, setOutcome] = useState("");
+  const [draft, setDraft] = useState("");
+  const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [role, setRole] = useState<string>("");
   const [moderators, setModerators] = useState<Array<{ id: string; name: string }>>([]);
@@ -50,7 +61,9 @@ export default function SupportDetailPage() {
       api<{ user: { role: string } }>("/api/auth/me"),
     ]);
     setSupport(data);
-    setOutcome(data.outcome ?? "");
+    const active = (data.comments ?? []).filter((item) => item.deleteStatus !== "pending");
+    setDraft(active[active.length - 1]?.text ?? "");
+    setAdding(false);
     setRole(session.user.role);
     if (session.user.role !== "moderator") {
       const users = await api<Array<{ id: string; name: string }>>("/api/users?role=moderator");
@@ -62,41 +75,58 @@ export default function SupportDetailPage() {
     load().catch((error) => toast.error(error.message));
   }, [params.id]);
 
-  async function saveComment() {
-    if (!outcome.trim()) {
+  const comments = useMemo(() => support?.comments ?? [], [support]);
+  const active = comments.filter((item) => item.deleteStatus !== "pending");
+  const history = adding ? comments : comments.filter((item) => item.id !== active[active.length - 1]?.id);
+  const last = adding ? null : active[active.length - 1] ?? null;
+
+  async function update() {
+    if (!draft.trim()) {
       toast.error("Write a comment first");
       return;
     }
     setSaving(true);
     try {
       await api(`/api/supports/${params.id}/comment`, {
-        method: "PATCH",
-        body: JSON.stringify({ outcome }),
+        method: adding || !last ? "POST" : "PATCH",
+        body: JSON.stringify({ text: draft, complete: support?.status !== "cancelled" }),
       });
-      toast.success("Comment saved");
+      toast.success("Updated");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save comment");
+      toast.error(error instanceof Error ? error.message : "Could not update");
     } finally {
       setSaving(false);
     }
   }
 
-  async function updateStatus(status: "in_progress" | "completed" | "cancelled") {
-    if (status === "completed" && !outcome.trim()) {
-      toast.error("Outcome / note is mandatory before completing");
-      return;
-    }
+  async function requestDelete(commentId: string) {
+    if (!window.confirm("Send this comment to manager for delete approval?")) return;
     setSaving(true);
     try {
-      await api(`/api/supports/${params.id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, outcome }),
+      await api(`/api/supports/${params.id}/comment?commentId=${encodeURIComponent(commentId)}`, {
+        method: "DELETE",
       });
-      toast.success(status === "completed" ? "Support completed" : "Status updated");
+      toast.success("Sent to manager for approval");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Update failed");
+      toast.error(error instanceof Error ? error.message : "Could not request delete");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function reviewDelete(commentId: string, decision: "approve" | "reject") {
+    setSaving(true);
+    try {
+      await api(`/api/supports/${params.id}/comment`, {
+        method: "PUT",
+        body: JSON.stringify({ commentId, decision }),
+      });
+      toast.success(decision === "approve" ? "Comment deleted" : "Delete request rejected");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not review delete");
     } finally {
       setSaving(false);
     }
@@ -105,30 +135,13 @@ export default function SupportDetailPage() {
   if (!support) return <p className="py-8 text-sm text-[#5d6f6b]">Loading support…</p>;
 
   const isModerator = role === "moderator";
-  const canWork = support.status !== "completed" && support.status !== "cancelled";
-
-  const actions = (
-    <>
-      <Button variant="secondary" className="w-full md:w-auto" disabled={saving || !outcome.trim()} onClick={saveComment}>
-        Save comment
-      </Button>
-            {support.status === "pending" ? (
-              <Button className="w-full md:w-auto" disabled={saving} onClick={() => updateStatus("in_progress")}>
-                Start work
-              </Button>
-            ) : null}
-            {canWork ? (
-              <Button className="w-full md:w-auto" disabled={saving || !outcome.trim()} onClick={() => updateStatus("completed")}>
-                Mark as completed
-              </Button>
-            ) : null}
-      {!isModerator && canWork ? (
-        <Button variant="secondary" className="w-full md:w-auto" disabled={saving} onClick={() => updateStatus("cancelled")}>
-          Cancel
-        </Button>
-      ) : null}
-    </>
-  );
+  const canReview = role === "super_admin" || role === "manager";
+  const canWork = support.status !== "cancelled";
+  const placement = shortPlacement([
+    support.student.branch?.name,
+    support.student.group?.name,
+    support.student.batch?.name,
+  ]);
 
   return (
     <div className={isModerator ? "pb-24 md:pb-0" : ""}>
@@ -155,6 +168,7 @@ export default function SupportDetailPage() {
                 {support.student.name}
               </Link>
             </p>
+            <p className="mt-1 text-sm text-[#5d6f6b]">{placement}</p>
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-[11px] uppercase text-[#5d6f6b]">S-Number</p>
@@ -169,14 +183,11 @@ export default function SupportDetailPage() {
                 <p>{support.student.roll} · {support.student.serial}</p>
               </div>
               <div>
-                <p className="text-[11px] uppercase text-[#5d6f6b]">Placement</p>
-                <p>{support.student.branch?.name}</p>
+                <p className="text-[11px] uppercase text-[#5d6f6b]">Branch / Group / Batch</p>
+                <p>{placement}</p>
               </div>
             </div>
-            <p className="mt-2 text-xs text-[#5d6f6b]">
-              {support.student.group?.name} · {support.student.batch?.name}
-            </p>
-            <div className="mt-4 grid grid-cols-2 gap-2 text-white">
+            <div className="mt-4 grid grid-cols-2 gap-2">
               <CallButton label="Call student" value={support.student.studentNumber} />
               <CallButton label="Call guardian" value={support.student.guardianPhone} />
             </div>
@@ -216,28 +227,103 @@ export default function SupportDetailPage() {
             <p className="mt-3 capitalize">Priority: {support.priority}</p>
             <p>Due: {formatDateTime(support.dueDate)}</p>
             <p>Completed: {formatDateTime(support.completedAt)}</p>
+            {!isModerator && support.status !== "cancelled" && support.status !== "completed" ? (
+              <Button
+                variant="ghost"
+                className="mt-3"
+                disabled={saving}
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await api(`/api/supports/${support.id}/status`, {
+                      method: "PATCH",
+                      body: JSON.stringify({ status: "cancelled" }),
+                    });
+                    toast.success("Support cancelled");
+                    await load();
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Could not cancel");
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                Cancel support
+              </Button>
+            ) : null}
           </Card>
         </div>
         <Card className="order-2 p-4 md:p-6 xl:order-1">
-          <h2 className="font-[family-name:var(--font-fraunces)] text-xl md:text-2xl">Work & outcome</h2>
+          <h2 className="font-[family-name:var(--font-fraunces)] text-xl md:text-2xl">Comments</h2>
           <p className="mt-2 text-sm text-[#5d6f6b]">
-            {role === "moderator"
-              ? "Start the case, then write a mandatory note before marking it complete."
-              : "Write a comment, then complete the case. A note is required."}
+            Keep old notes. Add a new comment for the next call. Only the last comment can be updated.
           </p>
-          <div className="mt-5">
-            <Field label="Comment / note">
-              <Textarea
-                rows={6}
-                value={outcome}
-                onChange={(event) => setOutcome(event.target.value)}
-                placeholder="What happened? What was collected or decided?"
-              />
-            </Field>
+          <div className="mt-4 space-y-3">
+            {history.map((item) => (
+              <div key={item.id} className="rounded-2xl border border-[#eee6d8] bg-[#fbf7f0] px-3 py-3">
+                <p className="whitespace-pre-wrap text-sm">{item.text}</p>
+                <p className="mt-2 text-xs text-[#5d6f6b]">
+                  {item.createdBy.name} · {formatDateTime(item.updatedAt || item.createdAt)}
+                </p>
+                {item.deleteStatus === "pending" ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-medium text-[#8a5a12]">Waiting for manager approval</p>
+                    {canReview ? (
+                      <>
+                        <Button type="button" disabled={saving} onClick={() => reviewDelete(item.id, "approve")}>
+                          Approve
+                        </Button>
+                        <Button type="button" variant="secondary" disabled={saving} onClick={() => reviewDelete(item.id, "reject")}>
+                          Reject
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button variant="secondary" disabled>
+                      Update
+                    </Button>
+                    <Button type="button" variant="danger" disabled={saving} onClick={() => requestDelete(item.id)}>
+                      Delete
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+            <div className="rounded-2xl border border-[#ddd4c4] bg-white px-3 py-3">
+              <Field label={adding || !last ? "New comment" : "Last comment"}>
+                <Textarea
+                  rows={5}
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder="What happened on this call?"
+                />
+              </Field>
+              <div className={isModerator ? "mt-3 hidden flex-wrap gap-2 md:flex" : "mt-3 flex flex-wrap gap-2"}>
+                <Button disabled={saving || !draft.trim() || !canWork} onClick={update}>
+                  Update
+                </Button>
+                {last ? (
+                  <Button type="button" variant="danger" disabled={saving} onClick={() => requestDelete(last.id)}>
+                    Delete
+                  </Button>
+                ) : null}
+              </div>
+            </div>
           </div>
-          <div className={isModerator ? "mt-4 hidden flex-wrap gap-2 md:flex" : "mt-4 flex flex-wrap gap-2"}>
-            {actions}
-          </div>
+          {last && !adding ? (
+            <button
+              type="button"
+              className="mt-3 text-sm font-medium text-[#0f5c56] hover:underline"
+              onClick={() => {
+                setAdding(true);
+                setDraft("");
+              }}
+            >
+              + New comment
+            </button>
+          ) : null}
         </Card>
       </div>
 
@@ -246,24 +332,9 @@ export default function SupportDetailPage() {
           className="fixed inset-x-0 bottom-0 z-20 border-t border-[#ddd4c4] bg-[#fffdf8]/95 p-3 backdrop-blur md:hidden"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" disabled={saving || !outcome.trim()} onClick={saveComment}>
-              Save
-            </Button>
-            {support.status === "pending" ? (
-              <Button disabled={saving} onClick={() => updateStatus("in_progress")}>
-                Start
-              </Button>
-            ) : canWork ? (
-              <Button disabled={saving} onClick={() => updateStatus("completed")}>
-                Complete
-              </Button>
-            ) : (
-              <Button variant="secondary" disabled>
-                Done
-              </Button>
-            )}
-          </div>
+          <Button className="w-full" disabled={saving || !draft.trim() || !canWork} onClick={update}>
+            Update
+          </Button>
         </div>
       ) : null}
     </div>

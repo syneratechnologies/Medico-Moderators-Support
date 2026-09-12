@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ChangePassword } from "@/components/change-password";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
-import { Button, Card, Field, Input, Select, TableWrap } from "@/components/ui";
+import { Button, Card, Field, Input, PasswordInput, Select, TableWrap } from "@/components/ui";
 import { api, roleLabel } from "@/lib/client";
 import { formatDate } from "@/lib/utils";
 
@@ -92,7 +93,7 @@ export default function UsersPage() {
             <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
             <Field label="Email"><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
             <Field label="Password">
-              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} minLength={6} />
+              <PasswordInput value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} minLength={6} autoComplete="new-password" />
               <p className="text-xs text-[#5d6f6b]">At least 6 characters</p>
             </Field>
             <Field label="Phone"><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
@@ -144,9 +145,12 @@ export default function UsersPage() {
                     <td className="px-3 py-3">{user.isActive ? "Active" : "Disabled"}</td>
                     <td className="px-3 py-3">{formatDate(user.createdAt)}</td>
                     <td className="px-3 py-3">
-                      <Button variant="secondary" onClick={() => toggle(user)}>
-                        {user.isActive ? "Disable" : "Enable"}
-                      </Button>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <ChangePassword userId={user.id} compact />
+                        <Button variant="secondary" onClick={() => toggle(user)}>
+                          {user.isActive ? "Disable" : "Enable"}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -11,6 +11,7 @@ export function SupportQueueCard({
   status,
   priority,
   when,
+  placement,
 }: {
   id: string;
   studentName?: string;
@@ -19,6 +20,7 @@ export function SupportQueueCard({
   status: string;
   priority?: string;
   when?: string | null;
+  placement?: string;
 }) {
   return (
     <Link
@@ -37,6 +39,7 @@ export function SupportQueueCard({
             ) : null}
             {supportType}
           </p>
+          {placement ? <p className="mt-0.5 truncate text-xs text-[#5d6f6b]">{placement}</p> : null}
           {when ? <p className="mt-1 text-xs text-[#5d6f6b]">{formatDateTime(when)}</p> : null}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">

@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button, Card, Input, Select, TableWrap, TelLink } from "@/components/ui";
 import { api } from "@/lib/client";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, shortPlacement } from "@/lib/utils";
 
 type SupportRow = {
   id: string;
@@ -19,7 +19,14 @@ type SupportRow = {
   assignedAt: string | null;
   completedAt: string | null;
   supportType: { name: string };
-  student: { id?: string; name?: string; studentNumber?: string };
+  student: {
+    id?: string;
+    name?: string;
+    studentNumber?: string;
+    branch?: { name?: string };
+    group?: { name?: string };
+    batch?: { name?: string };
+  };
 };
 
 type SortKey = "newest" | "oldest" | "student" | "type" | "priority";
@@ -141,6 +148,7 @@ function Section({
               id={item.id}
               studentName={item.student.name}
               studentNumber={item.student.studentNumber}
+              placement={shortPlacement([item.student.branch?.name, item.student.group?.name, item.student.batch?.name])}
               supportType={item.supportType.name}
               status={item.status}
               priority={item.priority}
@@ -158,6 +166,7 @@ function Section({
               <tr>
                 <th className="px-3 py-2">Student</th>
                 <th className="px-3 py-2">S-Number</th>
+                <th className="px-3 py-2">Branch / Group / Batch</th>
                 <th className="px-3 py-2">Support</th>
                 <th className="px-3 py-2">Stage</th>
                 <th className="px-3 py-2">Priority</th>
@@ -172,6 +181,9 @@ function Section({
                     <td className="px-3 py-3 font-medium">{item.student.name}</td>
                     <td className="px-3 py-3">
                       <TelLink value={item.student.studentNumber} />
+                    </td>
+                    <td className="px-3 py-3 text-[#5d6f6b]">
+                      {shortPlacement([item.student.branch?.name, item.student.group?.name, item.student.batch?.name])}
                     </td>
                     <td className="px-3 py-3">{item.supportType.name}</td>
                     <td className="px-3 py-3">

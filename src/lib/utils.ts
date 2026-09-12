@@ -46,6 +46,11 @@ export function formatDateTime(value?: string | Date | null) {
   }).format(date);
 }
 
+export function shortPlacement(parts: Array<string | undefined | null>) {
+  const values = parts.map((part) => String(part ?? "").trim()).filter(Boolean);
+  return values.length ? values.join(" · ") : "—";
+}
+
 export function toId(value: unknown) {
   if (!value) return "";
   if (typeof value === "string") return value;

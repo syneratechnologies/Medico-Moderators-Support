@@ -18,6 +18,7 @@ const populate = [
   { path: "assignedModerator" },
   { path: "createdBy" },
   { path: "completedBy" },
+  { path: "comments.createdBy" },
 ];
 
 export async function GET(

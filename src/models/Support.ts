@@ -22,6 +22,19 @@ const supportSchema = new Schema(
     },
     dueDate: { type: Date },
     outcome: { type: String, trim: true },
+    comments: [
+      {
+        text: { type: String, trim: true, required: true },
+        createdBy: { type: Schema.Types.ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date },
+        deleteStatus: { type: String, enum: ["pending", "approved", "rejected"] },
+        deleteRequestedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        deleteRequestedAt: { type: Date },
+        deleteReviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        deleteReviewedAt: { type: Date },
+      },
+    ],
     completedAt: { type: Date },
     completedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
@@ -40,9 +53,24 @@ function relaxDescription(schema: Schema) {
   path.validators = path.validators.filter((validator) => validator.type !== "required");
 }
 
+function ensureCommentDeletePaths(schema: Schema) {
+  const comments = schema.path("comments") as { schema?: Schema } | undefined;
+  const sub = comments?.schema;
+  if (!sub || sub.path("deleteStatus")) return;
+  sub.add({
+    deleteStatus: { type: String, enum: ["pending", "approved", "rejected"] },
+    deleteRequestedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    deleteRequestedAt: { type: Date },
+    deleteReviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    deleteReviewedAt: { type: Date },
+  });
+}
+
 relaxDescription(supportSchema);
+ensureCommentDeletePaths(supportSchema);
 if (mongoose.models.Support) {
   relaxDescription(mongoose.models.Support.schema);
+  ensureCommentDeletePaths(mongoose.models.Support.schema);
 }
 
 export type SupportDoc = InferSchemaType<typeof supportSchema> & {
