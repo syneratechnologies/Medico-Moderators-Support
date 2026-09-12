@@ -67,30 +67,41 @@ export function StudentQueueCard({
   activeSupports: number;
 }) {
   return (
-    <Link
-      href={`/students/${id}`}
-      className="block rounded-2xl border border-[#eee4d4] bg-white px-4 py-3.5 active:bg-[#f7f1e6]"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-base font-semibold leading-snug">{name}</p>
-          <p className="mt-0.5 text-sm text-[#5d6f6b]">
-            S-Number <TelLink value={studentNumber} />
-          </p>
-          <p className="mt-0.5 text-sm text-[#5d6f6b]">
-            G-Number <TelLink value={guardianPhone} />
-          </p>
-          <p className="mt-1 truncate text-xs text-[#5d6f6b]">{placement}</p>
+    <div className="rounded-2xl border border-[#eee4d4] bg-white">
+      <Link href={`/students/${id}`} className="block px-4 py-3.5 active:bg-[#f7f1e6]">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold leading-snug">{name}</p>
+            <p className="mt-0.5 text-sm text-[#5d6f6b]">
+              S-Number <TelLink value={studentNumber} />
+            </p>
+            <p className="mt-0.5 text-sm text-[#5d6f6b]">
+              G-Number <TelLink value={guardianPhone} />
+            </p>
+            <p className="mt-1 truncate text-xs text-[#5d6f6b]">{placement}</p>
+          </div>
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
+              activeSupports > 0 ? "bg-[#f8e8c8] text-[#8a5a12]" : "bg-[#e7eee9] text-[#3f5b54]"
+            )}
+          >
+            {activeSupports > 0 ? `${activeSupports} active` : "Clear"}
+          </span>
         </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
-            activeSupports > 0 ? "bg-[#f8e8c8] text-[#8a5a12]" : "bg-[#e7eee9] text-[#3f5b54]"
-          )}
-        >
-          {activeSupports > 0 ? `${activeSupports} active` : "Clear"}
+      </Link>
+      <div className="flex items-center justify-between gap-3 border-t border-[#eee4d4] px-4 py-2">
+        <span className="text-xs text-[#5d6f6b]">Report</span>
+        <span className="inline-flex items-center gap-2 text-xs font-medium">
+          <a href={`/api/students/${id}/report?format=xlsx`} className="text-[#0f5c56] hover:underline">
+            Excel
+          </a>
+          <span className="text-[#c5b8a4]">·</span>
+          <a href={`/api/students/${id}/report?format=pdf`} className="text-[#0f5c56] hover:underline">
+            PDF
+          </a>
         </span>
       </div>
-    </Link>
+    </div>
   );
 }

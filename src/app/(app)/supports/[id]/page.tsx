@@ -51,6 +51,8 @@ export default function SupportDetailPage() {
   const [support, setSupport] = useState<Support | null>(null);
   const [draft, setDraft] = useState("");
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [role, setRole] = useState<string>("");
   const [moderators, setModerators] = useState<Array<{ id: string; name: string }>>([]);
@@ -64,6 +66,8 @@ export default function SupportDetailPage() {
     const active = (data.comments ?? []).filter((item) => item.deleteStatus !== "pending");
     setDraft(active[active.length - 1]?.text ?? "");
     setAdding(false);
+    setEditingId(null);
+    setEditDraft("");
     setRole(session.user.role);
     if (session.user.role !== "moderator") {
       const users = await api<Array<{ id: string; name: string }>>("/api/users?role=moderator");
@@ -80,16 +84,20 @@ export default function SupportDetailPage() {
   const history = adding ? comments : comments.filter((item) => item.id !== active[active.length - 1]?.id);
   const last = adding ? null : active[active.length - 1] ?? null;
 
-  async function update() {
-    if (!draft.trim()) {
+  async function saveComment(text: string, commentId?: string, complete = false) {
+    if (!text.trim()) {
       toast.error("Write a comment first");
       return;
     }
     setSaving(true);
     try {
       await api(`/api/supports/${params.id}/comment`, {
-        method: adding || !last ? "POST" : "PATCH",
-        body: JSON.stringify({ text: draft, complete: support?.status !== "cancelled" }),
+        method: commentId || (!adding && last) ? "PATCH" : "POST",
+        body: JSON.stringify({
+          text,
+          commentId,
+          complete: complete && support?.status !== "cancelled",
+        }),
       });
       toast.success("Updated");
       await load();
@@ -98,6 +106,15 @@ export default function SupportDetailPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function update() {
+    await saveComment(draft, adding || !last ? undefined : last.id, true);
+  }
+
+  async function updatePrevious() {
+    if (!editingId) return;
+    await saveComment(editDraft, editingId, false);
   }
 
   async function requestDelete(commentId: string) {
@@ -256,12 +273,16 @@ export default function SupportDetailPage() {
         <Card className="order-2 p-4 md:p-6 xl:order-1">
           <h2 className="font-[family-name:var(--font-fraunces)] text-xl md:text-2xl">Comments</h2>
           <p className="mt-2 text-sm text-[#5d6f6b]">
-            Keep old notes. Add a new comment for the next call. Only the last comment can be updated.
+            Keep old notes. Previous comments can be edited. Add a new comment for the next call.
           </p>
           <div className="mt-4 space-y-3">
             {history.map((item) => (
               <div key={item.id} className="rounded-2xl border border-[#eee6d8] bg-[#fbf7f0] px-3 py-3">
-                <p className="whitespace-pre-wrap text-sm">{item.text}</p>
+                {editingId === item.id ? (
+                  <Textarea rows={4} value={editDraft} onChange={(event) => setEditDraft(event.target.value)} />
+                ) : (
+                  <p className="whitespace-pre-wrap text-sm">{item.text}</p>
+                )}
                 <p className="mt-2 text-xs text-[#5d6f6b]">
                   {item.createdBy.name} · {formatDateTime(item.updatedAt || item.createdAt)}
                 </p>
@@ -281,12 +302,41 @@ export default function SupportDetailPage() {
                   </div>
                 ) : (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button variant="secondary" disabled>
-                      Update
-                    </Button>
-                    <Button type="button" variant="danger" disabled={saving} onClick={() => requestDelete(item.id)}>
-                      Delete
-                    </Button>
+                    {editingId === item.id ? (
+                      <>
+                        <Button type="button" disabled={saving || !editDraft.trim()} onClick={updatePrevious}>
+                          Update
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled={saving}
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditDraft("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          disabled={saving}
+                          onClick={() => {
+                            setEditingId(item.id);
+                            setEditDraft(item.text);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button type="button" variant="danger" disabled={saving} onClick={() => requestDelete(item.id)}>
+                          Delete
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

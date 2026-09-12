@@ -7,6 +7,7 @@ import { CreateStudentSupport } from "@/components/create-student-support";
 import { StudentQueueCard } from "@/components/mobile-cards";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
+import { ReportDownload } from "@/components/report-download";
 import { Button, Card, Input, Select, TableWrap, TelLink } from "@/components/ui";
 import { api } from "@/lib/client";
 
@@ -241,9 +242,12 @@ export default function StudentsPage() {
                   </td>
                   <td className="px-3 py-3">{student.branch.name} · {student.group.name} · {student.batch.name}</td>
                   <td className="px-3 py-3">
-                    <Link href={`/students/${student.id}`}>
-                      <Button variant="secondary" type="button">View details</Button>
-                    </Link>
+                    <div className="flex flex-col items-start gap-2">
+                      <Link href={`/students/${student.id}`}>
+                        <Button variant="secondary" type="button">View details</Button>
+                      </Link>
+                      <ReportDownload href={`/api/students/${student.id}/report`} compact />
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -10,6 +10,7 @@ import { Support } from "@/models/Support";
 const schema = z.object({
   text: z.string().trim().min(1, "Comment is required").optional(),
   outcome: z.string().trim().min(1, "Comment is required").optional(),
+  commentId: z.string().min(1).optional(),
   complete: z.boolean().optional(),
 });
 
@@ -114,10 +115,17 @@ export async function PATCH(
   if (!canComment(user, support)) return jsonError("Forbidden", 403);
 
   support.comments = support.comments ?? [];
-  const last = [...support.comments].reverse().find((item) => item.deleteStatus !== "pending" && item.deleteStatus !== "approved");
-  if (last) {
-    last.text = text;
-    last.updatedAt = new Date();
+  const target = (
+    parsed.data?.commentId
+      ? commentDoc(support, parsed.data.commentId)
+      : [...support.comments].reverse().find((item) => item.deleteStatus !== "pending" && item.deleteStatus !== "approved")
+  ) as { text?: string; updatedAt?: Date; deleteStatus?: string; id?: string; _id?: unknown } | null;
+  if (target?.deleteStatus === "pending") {
+    return jsonError("This comment is waiting for delete approval");
+  }
+  if (target) {
+    target.text = text;
+    target.updatedAt = new Date();
   } else {
     support.comments.push({
       text,
@@ -125,9 +133,11 @@ export async function PATCH(
       createdAt: new Date(),
     });
   }
-  support.outcome = text;
+  const lastActive = [...support.comments].reverse().find((item) => item.deleteStatus !== "pending" && item.deleteStatus !== "approved");
+  support.outcome = lastActive?.text ?? text;
   if (support.description == null) support.description = "";
-  if (parsed.data?.complete && support.status !== "cancelled") {
+  const editingOlder = Boolean(parsed.data?.commentId && lastActive && String((lastActive as { id?: string; _id?: unknown }).id ?? lastActive._id) !== parsed.data.commentId);
+  if (parsed.data?.complete && !editingOlder && support.status !== "cancelled") {
     support.status = "completed";
     support.completedAt = new Date();
     support.completedBy = user.id as never;

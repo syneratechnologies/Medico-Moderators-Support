@@ -8,6 +8,7 @@ import { ChangePassword } from "@/components/change-password";
 import { CreateStudentSupport } from "@/components/create-student-support";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { ReportDownload } from "@/components/report-download";
 import { Button, Card, Select, TableWrap, TelLink } from "@/components/ui";
 import { api } from "@/lib/client";
 import { formatDateTime, shortPlacement } from "@/lib/utils";
@@ -164,6 +165,12 @@ export default function ModeratorDetailPage() {
         description={`${moderator.email}${moderator.phone ? ` · ${moderator.phone}` : ""} · ${moderator.isActive ? "Active" : "Disabled"}`}
         actions={
           <div className="flex flex-wrap gap-2">
+            <a href={`/api/users/${moderator.id}/report?format=xlsx`}>
+              <Button type="button" variant="secondary">Download Excel</Button>
+            </a>
+            <a href={`/api/users/${moderator.id}/report?format=pdf`}>
+              <Button type="button" variant="secondary">Download PDF</Button>
+            </a>
             <ChangePassword userId={moderator.id} />
             <Button type="button" onClick={() => setCreating(true)}>
               New support
@@ -358,6 +365,7 @@ function Section({
               <th className="px-3 py-2">Stage</th>
               <th className="px-3 py-2">Assigned</th>
               <th className="px-3 py-2">Comment</th>
+              <th className="px-3 py-2">Report</th>
             </tr>
           </thead>
           <tbody>
@@ -392,11 +400,18 @@ function Section({
                   </td>
                   <td className="px-3 py-3">{formatDateTime(item.assignedAt || item.createdAt)}</td>
                   <td className="px-3 py-3 text-[#5d6f6b]">{item.outcome || "—"}</td>
+                  <td className="px-3 py-3">
+                    {item.student.id ? (
+                      <ReportDownload href={`/api/students/${item.student.id}/report`} compact />
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td className="px-3 py-6 text-[#5d6f6b]" colSpan={8}>
+                <td className="px-3 py-6 text-[#5d6f6b]" colSpan={9}>
                   No cases in this section.
                 </td>
               </tr>

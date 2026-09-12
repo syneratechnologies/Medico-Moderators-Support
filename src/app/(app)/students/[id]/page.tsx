@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { CreateStudentSupport } from "@/components/create-student-support";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { ReportDownload } from "@/components/report-download";
 import { Button, Card, Field, Input, Select, TableWrap, TelLink } from "@/components/ui";
 import { api } from "@/lib/client";
 import { formatDate } from "@/lib/utils";
@@ -183,17 +184,20 @@ export default function StudentProfilePage() {
         title={student.name}
         description={`${student.studentNumber} · Roll ${student.roll} · ${student.branch.name}`}
         actions={
-          canEdit ? (
-            <>
-              <Button variant="secondary" onClick={() => setEditing((value) => !value)}>
-                {editing ? "Cancel" : "Edit profile"}
-              </Button>
-              <Button onClick={() => setAddingSupport(true)}>Add support</Button>
-              <Button variant="danger" type="button" onClick={deleteStudent}>
-                Delete
-              </Button>
-            </>
-          ) : null
+          <div className="flex flex-wrap gap-2">
+            <ReportDownload href={`/api/students/${student.id}/report`} />
+            {canEdit ? (
+              <>
+                <Button variant="secondary" onClick={() => setEditing((value) => !value)}>
+                  {editing ? "Cancel" : "Edit profile"}
+                </Button>
+                <Button onClick={() => setAddingSupport(true)}>Add support</Button>
+                <Button variant="danger" type="button" onClick={deleteStudent}>
+                  Delete
+                </Button>
+              </>
+            ) : null}
+          </div>
         }
       />
 
